@@ -22,20 +22,89 @@ Done = All above working for mainnet with a small allowlist; stable for any vali
 
 ```src/
 ├─ app/
-│  └─ challenge1/page.tsx            # Page shell: Search + SlideTabs + Approach sections
+│  ├─ challenge1/page.tsx              # Page shell: Search + tabs + captions (Approach 1 wired)
+│  ├─ api/
+│  │  └─ prices/
+│  │     └─ batch/route.ts            # Server batch for CG token pricing (throttle/retry/cache)
+│  │  ├─ native-price/route.ts        # Cached native ETH price (simple/price)
+│  │  ├─ token-price/route.ts         # Thin proxy alias for simple/token_price (singular)
+│  │  ├─ token-prices/route.ts        # Thin proxy for simple/token_price (plural)
+│  │  └─ token-logos/route.ts         # Fetches logo via coins/{platform}/contract/{addr}
+│  │  ├─ token-detail/route.ts        # Detail fallback (coins/{platform}/contract/{addr}) pricing
+│  │
+│  ├─ components/
+│  │  ├─ TokensList.tsx               # Presentational table; price skeletons; ‘n/a’ for spam/no-price
+│  │  └─ SlideTabs.tsx                # Tab switch (Individual / Batch RPC / Smart Contract)
+│  │  └─ NetworkSelector.tsx          # Mainnet/Base/Arbitrum selector (view-only)
+│  │  └─ ConnectButton.tsx            # RainbowKit Connect UI wrapper
+│  │
+│  ├─ lib/
+│  │  ├─ portfolio.ts                 # Discovery (Alchemy), spam heuristics, per‑token viem reads, merge
+│  │  ├─ prices.ts                    # Client helpers for pricing routes
+│  │  └─ alchemy.ts                   # Utilities for Alchemy client + RPC URLs per network
+│  │
+│  └─ providers.tsx                   # Wagmi + RainbowKit + React Query providers
 │
-├─ app/components/
-│  ├─ TokensList.tsx                 # Animated list (pure presentational)
-│  └─ SlideTabs.tsx                  # Already built (switch)
-│
-├─ lib/
-│  ├─ portfolio.ts                   # ALL fetching/formatting lives here
-│  └─ tokenLists/
-│     └─ mainnetTop.ts               # Small allowlist (WETH, USDC, USDT, DAI, WBTC, …)
-│
-contracts/
-└─ BalanceReader.sol                 # For approach 3 (view-only batch reader)
+├─ public/icons/eth.svg               # Local ETH icon (monochrome)
 ```
+
+### API Endpoints (App Router)
+
+- `POST /api/prices/batch`  
+  Body: `{ platform: 'ethereum'|'base'|'arbitrum-one', contract_addresses: string[] }`  
+  Returns: `{ [addrLower: string]: { usd: number, usd_24h_change?: number, … } }`  
+  Behavior: throttled, small concurrency (3 workers), retry/backoff, 60s in‑memory cache; falls back to `coins/{platform}/contract/{addr}` when `simple/token_price` is empty.
+
+- `GET /api/native-price`  
+  Returns: `{ usd: number, usd_24h_change?: number, … }` for `ids=ethereum`.  
+  Behavior: 60s in‑memory cache; in‑flight request dedupe; on upstream error returns last cached value if present.
+
+- `GET /api/token-price` and `GET /api/token-prices` (debug/proxy)  
+  Forwards to CoinGecko `simple/token_price/{platform}` with `x-cg-api-key` header. Normalizes response keys to lowercase.
+
+- `GET /api/token-logos?platform=…&contracts=a,b,c`  
+  Batches contract metadata lookups and extracts `image.small|thumb`.
+
+- `GET /api/token-detail?platform=…&address=0x…`  
+  Fallback route that returns `{ price, change, logo? }` extracted from `market_data` when simple/token_price returns empty.
+
+### Lib Functions
+
+`src/app/lib/portfolio.ts`
+- `discoverOwnedTokens(alchemy, address): PortfolioToken[]`  
+  Indexer discovery (per network): `contractAddress, name, symbol, logo, balance, decimals`.
+- `isLikelyValidToken(token): boolean`  
+  Heuristics: name/symbol present, lengths sane, decimals in range, ASCII symbol, logo exists.
+- `filterPortfolioTokens(tokens, net, { includeZero, verifiedOnly, heuristics }): PortfolioToken[]`  
+  Drop zeros; optionally apply heuristics.
+- `fetchIndividualBalancesViem(net, owner, tokenAddresses?): PortfolioToken[]`  
+  Per‑token viem reads: `decimals|symbol|name|balanceOf` (Approach 1 baseline).
+- `mergeTokenData(discovered, fresh): PortfolioToken[]`  
+  Prefer balance fields from RPC; keep metadata (name/logo) from discovery.
+- `fetchNativeToken(alchemy, address, net): PortfolioToken`  
+  Gets ETH balance (18 decimals) per selected network.
+
+`src/app/lib/prices.ts`
+- `fetchErc20Prices(net, contracts): Record<addr, { usd, usd_24h_change? }>`  
+  Calls `/api/prices/batch` once per network; returns a map of lowercase address → price entry.
+- `fetchNativeEthPrice(): { usd, usd_24h_change? }`  
+  Calls `/api/native-price` (cached/deduped) for ETH.
+- `fetchTokenLogos(net, contracts): Record<addr, url>`  
+  Calls `/api/token-logos` in small batches (cache‑friendly) to fill missing logos.
+
+### Components
+
+- `TokensList` props:  
+  - `items`: array of `{ symbol, name?, href?, balance, balanceDisplay?, price?, change24h?, usdValue?, icon?, spam?, noPrice?, loading? }`  
+  - `loadingPrices`: boolean (controls price skeletons only)  
+  Behavior:  
+  - If `spam || noPrice` → show `n/a` in Price/24h%/USD (Amount always shown).  
+  - Formats tiny prices and USD values (e.g., `<0.0001`).
+
+- `NetworkSelector`: view state only (Mainnet/Base/Arbitrum).
+- `SlideTabs`: Approach tabs.
+- `ConnectButton`: RainbowKit wrapper.
+
 
 ---
 
@@ -66,9 +135,10 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 ## Approaches (What to Implement)
 
 ### 1) Individual RPC Calls (baseline)
-- **What**: For each token in allowlist, call `balanceOf` (+ metadata) **per token**.  
-- **Why**: Establish slow/naïve baseline for perf comparison.  
-- **Output**: `PortfolioToken[]` filtered/sorted as per rules.
+- **What (current repo)**: Discover tokens via Alchemy for the selected network, tag spam via heuristics, then for non‑spam ERC‑20s perform per‑token RPC reads (`decimals`, `symbol`, `name`, `balanceOf`) using viem. Merge with discovery metadata.  
+- **Why**: Establish a clear baseline (many RPCs); useful for perf comparison against multicall/contract batching.  
+- **Output**: `PortfolioToken[]` filtered/sorted as per rules; native ETH included separately.  
+- **Note**: The original “allowlist” variant is replaced with indexer‑driven discovery in this repo.
 
 ### 2) Batch RPC (Multicall)
 - **What**: Use `viem` multicall to fetch many balances (and optional metadata) **in one RPC**.  
@@ -84,9 +154,9 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 
 ---
 
-## Prices (Optional but Nice)
+## Prices
 
-- Source: Use Coingecko simple price or Alchemy prices if available https://docs.coingecko.com/v3.0.1/reference/authentication.
+- Source: Use CoinGecko simple price (server-side batch) or Alchemy prices if available https://docs.coingecko.com/v3.0.1/reference/authentication.
 - Map `contract → priceUSD`, compute `valueUSD = balance * priceUSD`.
 - Cache per session; avoid hammering the API on every keystroke.
 
@@ -94,8 +164,7 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 
 ## Filtering & Ordering
 
-- Default: hide `balance === 0` and obvious spam (indexer flags if available).
-- Provide a UI toggle later (“Show zero/spam”).
+- Default: hide `balance === 0`; tag obvious spam via heuristics (logo/name/symbol/decimals) and allow hiding via “Hide Spam Tokens” (view‑only).
 - Sort: `valueUSD desc` → fallback `balance desc`.
 
 ---
@@ -105,7 +174,8 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 - Measure elapsed time per approach (`performance.now()`).
 - Approximate RPC call count (1 for multicall/contract; ~N for individual).
 - Display a small caption under `TokensList`, e.g.:  
-  “**Approach:** Multicall — **120ms**, **1 RPC**”.
+  - “**Approach:** Individual — **<ms>ms**, **~<N> RPC**”.  
+  - Pricing caption (local only): live “Pricing: <elapsed>ms, <processed>/<total+1> tokens” (+1 for ETH) with a static summary on completion.
 
 ---
 
@@ -130,11 +200,11 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 
 ## Deliverables
 
-- `src/lib/portfolio.ts` with three exported functions (one per approach).  
-- `src/lib/tokenLists/mainnetTop.ts` allowlist.  
-- `src/app/challenge1/page.tsx` wired to switch approaches and render `TokensList`.  
-- (Optional) `contracts/BalanceReader.sol` + minimal ABI on the frontend.  
-- Short notes in PR/commit: perf snapshot + known trade-offs.
+- `src/app/challenge1/page.tsx` wired to tabs, captions, and `TokensList`.  
+- `src/app/lib/portfolio.ts` (Approach 1 baseline).  
+- `src/app/lib/prices.ts` and server routes `src/app/api/prices/batch/route.ts`, `src/app/api/native-price/route.ts` (+ proxies/logos as needed).  
+- (Optional) `contracts/BalanceReader.sol` for Approach 3.  
+- Short notes in PR/commit: perf snapshot + known trade‑offs.
 
 ---
 
@@ -150,6 +220,80 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 ## TODO Backlog (later)
 
 - ENS resolution for search input.  
-- Toggle for zero/spam tokens.  
-- USD value + 24h% (with price source).  
-- Accessibility and keyboard navigation polish.  
+- ~~Toggle for zero/spam tokens.~~
+- ~~USD value + 24h% (with price source).~~  
+
+---
+
+## Approach 1 — Implementation Notes (What we shipped)
+
+This section documents the concrete behavior of our "Individual RPC" approach.
+
+### Data Flow (high‑level)
+
+- Discovery (indexer): `alchemy.core.getTokensForOwner(address)` to enumerate ERC‑20s and basic metadata per network.
+- Filtering (client): show only non‑zero balances; tag each token with a `spam` flag via conservative heuristics (missing name/symbol, extreme lengths, invalid decimals, non‑ASCII symbol, missing logo). Native ETH is always included.
+- Per‑token RPC (baseline): for filtered, non‑spam ERC‑20s we call, individually via viem:
+  - `decimals()`, `symbol()`, `name()`, `balanceOf(owner)`
+  - File: `src/app/lib/portfolio.ts` (`fetchIndividualBalancesViem`)
+- Merge: balances from RPC + metadata from discovery (preserve logos/names if RPC lacks them).
+- Native ETH: separate balance via `alchemy.core.getBalance`, rendered immediately.
+
+### Pricing (CoinGecko)
+
+- Server batch (no client fan‑out): `POST /api/prices/batch` receives `{ platform, contract_addresses[] }` and executes a throttled queue on the server.
+  - Simple route: `simple/token_price/{platform}` per contract; if empty, fallback to `coins/{platform}/contract/{address}` to extract `market_data`.
+  - Concurrency: 3 workers; global throttle gap: ~150ms between upstream requests; per‑request timeout: 7s; retry with backoff for 429/5xx/504 (honors `Retry-After`).
+  - In‑memory cache (≈60s) dedupes identical requests.
+  - Files: `src/app/api/prices/batch/route.ts`, helper client `src/app/lib/prices.ts`.
+- Native price: `GET /api/native-price` with in‑memory cache + in‑flight dedupe. Ether (ethereum id) is reused across networks.
+  - File: `src/app/api/native-price/route.ts`.
+- Spam handling: spam tokens are never priced; UI shows `n/a` for Price/24h%/USD Value while keeping token name and Amount.
+- "Hide Spam Tokens" toggle is view‑only (no refetch).
+
+### UI/UX
+
+- Instant feedback:
+  - Tokens + Amount render immediately after discovery.
+  - Native ETH shows price/24h%/USD immediately (no skeletons, cached placeholder if available).
+  - ERC‑20 rows show skeletons for Price/24h%/USD while pricing runs; if a token has no CG data, we mark it `noPrice` and show `n/a` immediately (Amount still displayed).
+- Sorting: rows sorted by USD Value descending; unpriced/spam rows sink to the bottom.
+- Captions:
+  - RPC perf: “Approach: Individual — <ms>ms, ~<N> RPC”.
+  - Pricing perf:
+    - Live (local progress): “Pricing: <elapsed>ms, <processed>/<total+1> tokens” (+1 accounts for ETH).
+    - Static on completion: “Pricing: <ms>ms, <total+1> tokens”.
+
+### Env & Config
+
+- Alchemy key (public for demo): `NEXT_PUBLIC_API` used to configure the Alchemy SDK.
+- CoinGecko key: `NEXT_PUBLIC_COINGECKO_API` (also supports `NEXT_PUBLIC_COINGECKO_API_KEY`, `NEXT_PUBLIC_CG_API_KEY`, `NEXT_PUBLIC_CG_KEY`).
+  - Sent as `x-cg-api-key` from server routes only.
+- No secrets are committed; `.env*` is ignored by git.
+
+### Files (main touchpoints)
+
+- Page + state: `src/app/challenge1/page.tsx` — search, network selector, captions, mapping to `TokensList`.
+- ERC‑20 per‑token reads: `src/app/lib/portfolio.ts` (`fetchIndividualBalancesViem`, spam heuristics, merge).
+- Pricing helpers: `src/app/lib/prices.ts` (client calls to batch/native/logos).
+- Server routes: `src/app/api/prices/batch/route.ts`, `src/app/api/native-price/route.ts`, plus thin proxies for diagnostics (`/api/token-price(s)`, `/api/token-logos`).
+- Presentational list: `src/app/components/TokensList.tsx` — price skeletons, `n/a`, tiny‑value formatting.
+
+### Non‑disruptive Guarantees
+
+- Pricing queue is fully server‑side; client makes one call per network and optionally polls local progress for the caption only — never CoinGecko directly.
+- Native price is cached and deduped; bursts won’t 429 the endpoint.
+- The "Hide Spam Tokens" toggle never triggers new requests; it only filters the rendered rows.
+- All perf captions are read‑only; disabling them does not change the fetch pipeline.
+
+### Known Trade‑offs
+
+- Spam heuristics are intentionally conservative; some legitimate tokens without logos may be flagged as spam → they still appear (unless hidden) and remain unpriced.
+- Very large portfolios will still stream skeletons until pricing completes; concurrency is capped to remain polite to CG (adjustable if needed).
+
+### Quick Verify
+
+1) `npm run dev` → `/challenge1`
+2) Enter a valid address → Search.
+3) Switch networks; native ETH appears immediately; ERC‑20s price in batches; watch the pricing caption.
+4) Toggle “Hide Spam Tokens” (view‑only) and confirm spam rows disappear/reappear; no refetch.
