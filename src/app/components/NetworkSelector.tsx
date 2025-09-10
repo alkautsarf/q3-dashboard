@@ -17,7 +17,7 @@ const labels: Record<NetworkKey, string> = {
 };
 
 export function NetworkSelector({ value, onChange }: NetworkSelectorProps) {
-  const options: NetworkKey[] = ["mainnet", "base", "arbitrum"];
+  const options: NetworkKey[] = ["mainnet", "arbitrum"];
   return (
     <div className="flex items-center gap-2 border border-gray-400 rounded-full p-1 bg-white">
       {options.map((opt) => (

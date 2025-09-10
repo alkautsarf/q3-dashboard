@@ -13,7 +13,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query"; // via TanStac
 import { filterPortfolioTokens } from "@/app/lib/portfolio";
 import { fetchErc20Prices, fetchNativeEthPrice, fetchTokenLogos } from "@/app/lib/prices";
 
-const approaches = ["Individual", "Batch RPC", "Smart Contract"];
+  const approaches = ["Individual", "Batch RPC", "Smart Contract"];
 
 async function fetchApproach1Core(
   net: NetworkKey,
@@ -92,40 +92,15 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
     [viewTokens]
   );
 
-  const [pricePerf, setPricePerf] = useState<{ ms: number } | null>(null);
-  const contractsKey = useMemo(() => [...contracts].sort().join(","), [contracts]);
   const { data: erc20Prices, isFetching: isFetchingErc20 } = useQuery({
-    queryKey: ["prices-erc20", net, contractsKey],
-    enabled: (() => {
-      if (contracts.length === 0) return false;
-      const st = queryClient.getQueryState(["prices-erc20", net, contractsKey]);
-      return !st || st.status !== "success";
-    })(),
+    queryKey: ["prices-erc20", net, [...contracts].sort().join(",")],
+    enabled: contracts.length > 0,
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
     keepPreviousData: true,
-    placeholderData: () => queryClient.getQueryData(["prices-erc20", net, contractsKey]) as any,
-    queryFn: async () => {
-      console.log(`[prices] requesting ${net} contracts:`, contracts);
-      const t0 = performance.now();
-      const res = await fetchErc20Prices(net, contracts);
-      const elapsed = Math.round(performance.now() - t0);
-      setPricePerf({ ms: elapsed });
-      // Cache perf so other approaches or re-renders can show static caption without refetch
-      queryClient.setQueryData(["price-perf", net, contractsKey], { ms: elapsed });
-      queryClient.setQueryData(["price-perf-last", net], { ms: elapsed, key: contractsKey });
-      // Global per-network perf so both approaches show the same caption
-      queryClient.setQueryData(["price-perf-global", net], { ms: elapsed });
-      return res;
-    },
+    queryFn: async () => fetchErc20Prices(net, contracts),
   });
-
-  // Read cached perf if available (for consistency across approaches) – no network call
-  const pricePerfCached =
-    (queryClient.getQueryData(["price-perf", net, contractsKey]) as { ms: number } | null) ||
-    (queryClient.getQueryData(["price-perf-last", net]) as { ms: number } | null);
-  const pricePerfGlobal = queryClient.getQueryData(["price-perf-global", net]) as { ms: number } | null;
 
   const { data: nativePrice, isFetching: isFetchingNative } = useQuery({
     queryKey: ["price-native"],
@@ -138,35 +113,7 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
     queryFn: async () => fetchNativeEthPrice(),
   });
 
-  // Live pricing progress (poll only local progress; no upstream calls)
-  const platformId = useMemo(
-    () => (net === "mainnet" ? "ethereum" : net === "base" ? "base" : "arbitrum-one"),
-    [net]
-  );
-  const { data: priceProg } = useQuery({
-    queryKey: ["price-progress", platformId],
-    enabled: isFetchingErc20,
-    refetchInterval: isFetchingErc20 ? 500 : false,
-    refetchOnWindowFocus: false,
-    retry: false,
-    queryFn: async () => {
-      try {
-        const res = await fetch(`/api/prices/batch?platform=${platformId}`, { cache: "no-store" });
-        if (!res.ok) return null;
-        return (await res.json()) as { total: number; processed: number; success: number; startAt: number; running: boolean } | null;
-      } catch {
-        return null;
-      }
-    },
-  });
-
-  // Stable total count for caption: number of ERC-20s being priced + 1 for ETH
-  const totalTokensIncludingEth = useMemo(() => {
-    const ercCount = (viewTokens || []).filter((t: any) => t.address && t.address !== "native" && !t.spam).length;
-    return ercCount + 1; // +1 for Ether
-  }, [viewTokens]);
-
-  // No live polling; perf is measured per completed batch above
+  // No pricing perf caption or live polling (performance-focused)
 
 
   const missingLogos = useMemo(
@@ -268,23 +215,7 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
               </p>
             </div>
           )}
-          {isFetchingErc20 && priceProg && (
-            <div className="mb-2 flex justify-end">
-              <p className="text-xs text-gray-600">
-                {(() => {
-                  const elapsed = Math.max(0, Date.now() - (priceProg.startAt || Date.now()));
-                  return `Pricing: ${elapsed}ms, ${priceProg.processed}/${totalTokensIncludingEth} tokens`;
-                })()}
-              </p>
-            </div>
-          )}
-          {!isFetchingErc20 && pricePerf && (
-            <div className="mb-2 flex justify-end">
-              <p className="text-xs text-gray-600">
-                Pricing: {pricePerf.ms}ms, {totalTokensIncludingEth} tokens
-              </p>
-            </div>
-          )}
+          {/* Pricing perf caption removed for performance */}
           <TokensList items={items} loadingPrices={isFetchingErc20 || isFetchingNative} />
         </>
       )}
@@ -338,7 +269,7 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
     [viewTokens]
   );
 
-  const [pricePerf, setPricePerf] = useState<{ ms: number } | null>(null);
+  // Pricing perf caption removed (perf-focused)
   const contractsKey = useMemo(() => [...contracts].sort().join(","), [contracts]);
   const { data: erc20Prices, isFetching: isFetchingErc20 } = useQuery({
     queryKey: ["prices-erc20", net, contractsKey],
@@ -353,21 +284,12 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
     keepPreviousData: true,
     placeholderData: () => queryClient.getQueryData(["prices-erc20", net, contractsKey]) as any,
     queryFn: async () => {
-      const t0 = performance.now();
-      const res = await fetchErc20Prices(net, contracts);
-      const elapsed = Math.round(performance.now() - t0);
-      setPricePerf({ ms: elapsed });
-      queryClient.setQueryData(["price-perf", net, contractsKey], { ms: elapsed });
-      queryClient.setQueryData(["price-perf-global", net], { ms: elapsed });
-      return res;
+      return fetchErc20Prices(net, contracts);
     },
   });
 
   // Read cached perf for consistency (no fetch)
-  const pricePerfCached =
-    (queryClient.getQueryData(["price-perf", net, contractsKey]) as { ms: number } | null) ||
-    (queryClient.getQueryData(["price-perf-last", net]) as { ms: number } | null) ||
-    (queryClient.getQueryData(["price-perf-global", net]) as { ms: number } | null);
+  // Pricing perf caption removed; no cached perf reads
 
   const { data: nativePrice, isFetching: isFetchingNative } = useQuery({
     queryKey: ["price-native"],
@@ -380,23 +302,7 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
     queryFn: async () => fetchNativeEthPrice(),
   });
 
-  const platformId = useMemo(() => (net === "mainnet" ? "ethereum" : net === "base" ? "base" : "arbitrum-one"), [net]);
-  const { data: priceProg } = useQuery({
-    queryKey: ["price-progress", platformId],
-    enabled: isFetchingErc20,
-    refetchInterval: isFetchingErc20 ? 500 : false,
-    refetchOnWindowFocus: false,
-    retry: false,
-    queryFn: async () => {
-      try {
-        const res = await fetch(`/api/prices/batch?platform=${platformId}`, { cache: "no-store" });
-        if (!res.ok) return null;
-        return (await res.json()) as { total: number; processed: number; success: number; startAt: number; running: boolean } | null;
-      } catch {
-        return null;
-      }
-    },
-  });
+  // No live polling for pricing progress
 
   const missingLogos = useMemo(
     () =>
@@ -487,21 +393,7 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
               <p className="text-xs text-gray-600">Approach: Batch RPC — {data.perf.ms}ms, ~{data.perf.rpc} RPC</p>
             </div>
           )}
-          {isFetchingErc20 && priceProg && (
-            <div className="mb-2 flex justify-end">
-              <p className="text-xs text-gray-600">
-                {(() => {
-                  const elapsed = Math.max(0, Date.now() - (priceProg.startAt || Date.now()));
-                  return `Pricing: ${elapsed}ms, ${priceProg.processed}/${totalTokensIncludingEth} tokens`;
-                })()}
-              </p>
-            </div>
-          )}
-          {!isFetchingErc20 && pricePerf && (
-            <div className="mb-2 flex justify-end">
-              <p className="text-xs text-gray-600">Pricing: {pricePerf.ms}ms, {totalTokensIncludingEth} tokens</p>
-            </div>
-          )}
+          {/* Pricing perf caption removed for performance */}
           <TokensList items={items} loadingPrices={isFetchingErc20 || isFetchingNative} />
         </>
       )}
@@ -548,14 +440,6 @@ export default function Challenge1Page() {
     gcTime: 1000 * 60 * 30,
     refetchOnWindowFocus: false,
     queryFn: async () => fetchApproach1Core("mainnet", effectiveAddress!),
-  });
-  const qBase = useQuery({
-    queryKey: ["portfolio", "individual", "base", effectiveAddress],
-    enabled: Boolean(effectiveAddress),
-    staleTime: Infinity,
-    gcTime: 1000 * 60 * 30,
-    refetchOnWindowFocus: false,
-    queryFn: async () => fetchApproach1Core("base", effectiveAddress!),
   });
   const qArb = useQuery({
     queryKey: ["portfolio", "individual", "arbitrum", effectiveAddress],
