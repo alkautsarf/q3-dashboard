@@ -92,6 +92,7 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
     [viewTokens]
   );
 
+  const [pricePerf, setPricePerf] = useState<{ ms: number } | null>(null);
   const { data: erc20Prices, isFetching: isFetchingErc20 } = useQuery({
     queryKey: ["prices-erc20", net, [...contracts].sort().join(",")],
     enabled: contracts.length > 0,
@@ -101,7 +102,11 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
     keepPreviousData: true,
     queryFn: async () => {
       console.log(`[prices] requesting ${net} contracts:`, contracts);
-      return fetchErc20Prices(net, contracts);
+      const t0 = performance.now();
+      const res = await fetchErc20Prices(net, contracts);
+      const elapsed = Math.round(performance.now() - t0);
+      setPricePerf({ ms: elapsed });
+      return res;
     },
   });
 
@@ -115,6 +120,36 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
     placeholderData: () => queryClient.getQueryData(["price-native"]) as any,
     queryFn: async () => fetchNativeEthPrice(),
   });
+
+  // Live pricing progress (poll only local progress; no upstream calls)
+  const platformId = useMemo(
+    () => (net === "mainnet" ? "ethereum" : net === "base" ? "base" : "arbitrum-one"),
+    [net]
+  );
+  const { data: priceProg } = useQuery({
+    queryKey: ["price-progress", platformId],
+    enabled: isFetchingErc20,
+    refetchInterval: isFetchingErc20 ? 500 : false,
+    refetchOnWindowFocus: false,
+    retry: false,
+    queryFn: async () => {
+      try {
+        const res = await fetch(`/api/prices/batch?platform=${platformId}`, { cache: "no-store" });
+        if (!res.ok) return null;
+        return (await res.json()) as { total: number; processed: number; success: number; startAt: number; running: boolean } | null;
+      } catch {
+        return null;
+      }
+    },
+  });
+
+  // Stable total count for caption: number of ERC-20s being priced + 1 for ETH
+  const totalTokensIncludingEth = useMemo(() => {
+    const ercCount = (viewTokens || []).filter((t: any) => t.address && t.address !== "native" && !t.spam).length;
+    return ercCount + 1; // +1 for Ether
+  }, [viewTokens]);
+
+  // No live polling; perf is measured per completed batch above
 
 
   const missingLogos = useMemo(
@@ -216,7 +251,23 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
               </p>
             </div>
           )}
-          {/* Removed live pricing caption to stabilize fetching */}
+          {isFetchingErc20 && priceProg && (
+            <div className="mb-2 flex justify-end">
+              <p className="text-xs text-gray-600">
+                {(() => {
+                  const elapsed = Math.max(0, Date.now() - (priceProg.startAt || Date.now()));
+                  return `Pricing: ${elapsed}ms, ${priceProg.processed}/${totalTokensIncludingEth} tokens`;
+                })()}
+              </p>
+            </div>
+          )}
+          {!isFetchingErc20 && pricePerf && (
+            <div className="mb-2 flex justify-end">
+              <p className="text-xs text-gray-600">
+                Pricing: {pricePerf.ms}ms, {totalTokensIncludingEth} tokens
+              </p>
+            </div>
+          )}
           <TokensList items={items} loadingPrices={isFetchingErc20 || isFetchingNative} />
         </>
       )}
