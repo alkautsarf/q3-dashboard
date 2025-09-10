@@ -322,7 +322,8 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
       const combined = [native, ...merged, ...spamOnes];
       const finalTokens = filterPortfolioTokens(combined as any, net, { includeZero: false, verifiedOnly: false, heuristics: false });
       const elapsedMs = Math.round(performance.now() - t0);
-      const approxRpc = 1 /* discovery */ + 1 /* multicall */ + 1 /* native */;
+      const MULTICALL_BATCH = 150;
+      const approxRpc = 1 /* discovery */ + Math.max(1, Math.ceil(nonSpam.length / MULTICALL_BATCH)) /* multicall chunks */ + 1 /* native */;
       return { tokens: finalTokens, perf: { ms: elapsedMs, rpc: approxRpc } } as const;
     },
   });

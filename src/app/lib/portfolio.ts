@@ -310,33 +310,50 @@ export async function fetchBalancesMulticallViem(
   const rpcUrl = getAlchemyRpcUrl(net);
   const client = createPublicClient({ chain: viemChainFor(net), transport: http(rpcUrl) });
 
-  const contracts = tokens.map((t) => ({
-    address: t.address as `0x${string}`,
-    abi: erc20Abi,
-    functionName: "balanceOf" as const,
-    args: [owner as `0x${string}`],
-  }));
+  // De‑duplicate addresses (lowercased) to prevent wasted calls.
+  const uniqMap = new Map<string, { address: string; decimals?: number }>();
+  for (const t of tokens) {
+    const k = t.address.toLowerCase();
+    if (!uniqMap.has(k)) uniqMap.set(k, t);
+  }
+  const uniq = Array.from(uniqMap.values());
 
-  const results = await client.multicall({ contracts });
+  // Chunk contracts to avoid overly-large multicalls on some RPCs.
+  const BATCH_SIZE = 150;
+  const chunks: { address: string; decimals?: number }[][] = [];
+  for (let i = 0; i < uniq.length; i += BATCH_SIZE) chunks.push(uniq.slice(i, i + BATCH_SIZE));
 
   const out: PortfolioToken[] = [];
-  for (let i = 0; i < tokens.length; i++) {
-    const meta = tokens[i];
-    const r = results[i];
-    if (r.status !== "success") continue;
-    const raw = r.result as bigint;
-    const dec = typeof meta.decimals === "number" ? meta.decimals : 18;
-    const balanceStr = formatUnits(raw, dec);
-    const balance = Number(balanceStr);
-    out.push({
-      address: meta.address,
-      name: "", // merged later
-      symbol: "",
-      balance,
-      balanceStr,
-      decimals: dec,
-    });
-  }
+  // Small concurrency to improve throughput while staying polite to RPC provider.
+  const CONCURRENCY = 3;
+  let index = 0;
+  const worker = async () => {
+    while (index < chunks.length) {
+      const i = index++;
+      const batch = chunks[i];
+      const contracts = batch.map((t) => ({
+        address: t.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "balanceOf" as const,
+        args: [owner as `0x${string}`],
+      }));
+
+      const results = await client.multicall({ contracts, allowFailure: true });
+      for (let j = 0; j < batch.length; j++) {
+        const meta = batch[j];
+        const r = results[j];
+        if (!r || r.status !== "success") continue;
+        const raw = r.result as bigint;
+        const dec = typeof meta.decimals === "number" ? meta.decimals : 18;
+        const balanceStr = formatUnits(raw, dec);
+        const balance = Number(balanceStr);
+        out.push({ address: meta.address, name: "", symbol: "", balance, balanceStr, decimals: dec });
+      }
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(CONCURRENCY, chunks.length) }, () => worker());
+  await Promise.all(workers);
   return out;
 }
 
