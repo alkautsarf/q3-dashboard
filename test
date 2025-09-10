@@ -1,6 +1,0 @@
-0x59d1e836F7b7210A978b25a855085cc46fd090B5
-
-curl -X GET \
-  "https://api.coingecko.com/api/v3/simple/token_price/ethereum?contract_addresses=0x59d1e836F7b7210A978b25a855085cc46fd090B5&vs_currencies=usd&include_24hr_change=true" \
-  -H "accept: application/json" \
-  -H "x-cg-api-key: CG-AdKjWShLgECqzf8z1vFqVwJK"
