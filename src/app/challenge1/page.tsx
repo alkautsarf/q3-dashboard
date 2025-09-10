@@ -150,12 +150,15 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
             ? NATIVE_ICON
             : t.logo || (logoMap ? (logoMap as any)[String(t.address).toLowerCase()] : undefined),
         href:
-          t.address && t.address !== "native"
+          t.address === "native"
+            ? "https://www.coingecko.com/en/coins/ethereum"
+            : t.address
             ? `${explorerBase}/address/${String(t.address).toLowerCase()}`
             : undefined,
         // Do not skeleton native row; show value as soon as available
         loading: t.address === "native" ? false : isFetchingErc20,
         spam: Boolean(t.spam),
+        noPrice: false,
       } as any;
 
       if (t.address === "native") {
@@ -184,7 +187,8 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
           usdValue: price * base.balance,
         };
       }
-      return { ...base };
+      // If ERC20 pricing fetch is not in-flight and no entry exists, mark as noPrice
+      return { ...base, noPrice: !isFetchingErc20 };
     });
     // Sort by usdValue desc; undefined or spam at the end
     rows.sort((a: any, b: any) => {

@@ -15,6 +15,7 @@ interface TokenItem {
   icon?: string;
   loading?: boolean; // row-level loading state for price fields
   spam?: boolean;
+  noPrice?: boolean; // explicitly flagged when CG has no data
 }
 
 interface TokensListProps {
@@ -100,7 +101,7 @@ const TokenRow: React.FC<{ item: TokenItem; index: number; loadingPrices?: boole
 
       {/* Price */}
       <td className="px-4 py-2 text-sm text-gray-700">
-        {item.spam ? (
+        {item.spam || item.noPrice ? (
           <span className="text-gray-400">n/a</span>
         ) : (item.loading ?? loadingPrices) ? (
           <span className="inline-block h-4 w-20 rounded bg-gray-200 animate-pulse" />
@@ -114,7 +115,7 @@ const TokenRow: React.FC<{ item: TokenItem; index: number; loadingPrices?: boole
       {/* 24h Change */}
       <td
         className={`px-4 py-2 text-sm font-medium ${
-          item.spam
+          item.spam || item.noPrice
             ? "text-gray-400"
             : item.change24h !== undefined
             ? item.change24h === 0
@@ -125,7 +126,7 @@ const TokenRow: React.FC<{ item: TokenItem; index: number; loadingPrices?: boole
             : "text-gray-400"
         }`}
       >
-        {item.spam
+        {item.spam || item.noPrice
           ? "n/a"
           : (item.loading ?? loadingPrices)
           ? <span className="inline-block h-4 w-12 rounded bg-gray-200 animate-pulse" />
@@ -139,7 +140,7 @@ const TokenRow: React.FC<{ item: TokenItem; index: number; loadingPrices?: boole
 
       {/* USD Value */}
       <td className="px-4 py-2 text-sm text-gray-900 font-medium">
-        {item.spam ? (
+        {item.spam || item.noPrice ? (
           <span className="text-gray-400">n/a</span>
         ) : (item.loading ?? loadingPrices) ? (
           <span className="inline-block h-4 w-24 rounded bg-gray-200 animate-pulse" />
