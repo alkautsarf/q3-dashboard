@@ -292,6 +292,54 @@ export async function fetchIndividualBalancesViem(
   return out;
 }
 
+// ------------------------------
+// Approach 2: Batch RPC (Multicall) via viem
+// ------------------------------
+
+/**
+ * Fetch balances in a single multicall for many ERC‑20 tokens.
+ * Metadata (name/symbol/decimals) is expected to come from discovery; this
+ * method focuses on balances to reduce RPCs.
+ */
+export async function fetchBalancesMulticallViem(
+  net: SupportedNetwork,
+  owner: string,
+  tokens: { address: string; decimals?: number }[]
+): Promise<PortfolioToken[]> {
+  if (!tokens?.length) return [];
+  const rpcUrl = getAlchemyRpcUrl(net);
+  const client = createPublicClient({ chain: viemChainFor(net), transport: http(rpcUrl) });
+
+  const contracts = tokens.map((t) => ({
+    address: t.address as `0x${string}`,
+    abi: erc20Abi,
+    functionName: "balanceOf" as const,
+    args: [owner as `0x${string}`],
+  }));
+
+  const results = await client.multicall({ contracts });
+
+  const out: PortfolioToken[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const meta = tokens[i];
+    const r = results[i];
+    if (r.status !== "success") continue;
+    const raw = r.result as bigint;
+    const dec = typeof meta.decimals === "number" ? meta.decimals : 18;
+    const balanceStr = formatUnits(raw, dec);
+    const balance = Number(balanceStr);
+    out.push({
+      address: meta.address,
+      name: "", // merged later
+      symbol: "",
+      balance,
+      balanceStr,
+      decimals: dec,
+    });
+  }
+  return out;
+}
+
 // Merge two token arrays by address (lowercased). Prefer values from `fresh`
 // for balance-related fields, and preserve presentational metadata from
 // `discovered` when available (logo, symbol, name).
