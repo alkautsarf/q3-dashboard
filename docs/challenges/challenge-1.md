@@ -35,7 +35,7 @@ Done = All above working for mainnet with a small allowlist; stable for any vali
 │  ├─ components/
 │  │  ├─ TokensList.tsx               # Presentational table; price skeletons; ‘n/a’ for spam/no-price
 │  │  └─ SlideTabs.tsx                # Tab switch (Individual / Batch RPC / Smart Contract)
-│  │  └─ NetworkSelector.tsx          # Mainnet/Base/Arbitrum selector (view-only)
+│  │  └─ NetworkSelector.tsx          # Mainnet/Arbitrum selector (view-only)
 │  │  └─ ConnectButton.tsx            # RainbowKit Connect UI wrapper
 │  │
 │  ├─ lib/
@@ -141,9 +141,19 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 - **Note**: The original “allowlist” variant is replaced with indexer‑driven discovery in this repo.
 
 ### 2) Batch RPC (Multicall)
-- **What**: Use `viem` multicall to fetch many balances (and optional metadata) **in one RPC**.  
+- **What (current repo)**: Use `viem` multicall to fetch many balances in fewer RPCs (chunked + concurrent). Metadata from discovery is merged with balances.  
 - **Why**: Faster UX, fewer RPCs.  
 - **Output**: Same shaped `PortfolioToken[]`.
+
+#### Implementation Notes
+
+- `fetchBalancesMulticallViem` (src/app/lib/portfolio.ts):  
+  - Deduplicate addresses (lowercased).  
+  - Chunk size ≈ 150 per multicall to avoid oversize payloads.  
+  - Concurrency ≈ 3 to improve throughput while respecting provider limits.  
+  - `allowFailure: true` so non‑standard tokens don’t break the batch.  
+  - Balance formatting uses decimals from discovery.  
+- RPC caption shows estimated calls: `1 (discovery) + ceil(nonSpam/chunk) + 1 (native)`.
 
 ### 3) Smart-Contract Batch (Solidity)
 - **What**: `BalanceReader.sol` view method, loops with `try/catch` to tolerate non-standard ERC-20s, returns batched results.  
@@ -175,7 +185,7 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 - Approximate RPC call count (1 for multicall/contract; ~N for individual).
 - Display a small caption under `TokensList`, e.g.:  
   - “**Approach:** Individual — **<ms>ms**, **~<N> RPC**”.  
-  - Pricing caption (local only): live “Pricing: <elapsed>ms, <processed>/<total+1> tokens” (+1 for ETH) with a static summary on completion.
+  - Pricing caption: removed (perf-focused simplification).
 
 ---
 
@@ -187,6 +197,15 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 - **Errors**: Show terse message; console log details.
 
 ---
+
+## Changelog
+
+- 2025-09-11 — perf(batch-rpc): stabilize Approach 2 (Multicall)
+  - Cache a viem public client per network to reuse HTTP transport and reduce setup overhead.  
+  - Adaptive multicall chunk sizes to reduce calldata and EVM execution overhead for small/medium portfolios: `<=12 → N`, `<=60 → 40`, `<=200 → 100`, else `120`.  
+  - Keep `allowFailure: true` and address de-duplication.  
+  - Update RPC caption estimate to reflect adaptive chunking.  
+  - No API/UX/type changes. Behavior preserved; more consistent timings across different token counts.
 
 ## Testing Checklist
 
@@ -224,6 +243,7 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 - ~~USD value + 24h% (with price source).~~  
 
 ---
+
 
 ## Approach 1 — Implementation Notes (What we shipped)
 
@@ -297,3 +317,40 @@ This section documents the concrete behavior of our "Individual RPC" approach.
 2) Enter a valid address → Search.
 3) Switch networks; native ETH appears immediately; ERC‑20s price in batches; watch the pricing caption.
 4) Toggle “Hide Spam Tokens” (view‑only) and confirm spam rows disappear/reappear; no refetch.
+
+## Approach 2 — Batch RPC (Multicall) via viem
+
+This approach batches token balance reads using viem multicall to reduce RPC calls significantly while preserving Approach 1’s data model and UI.
+
+### Implementation Notes (What we shipped)
+
+- Discovery & Filter: identical to Approach 1 (Alchemy discovery, hide zeros, spam heuristics, native ETH retained).  
+- Multicall for balances: `fetchBalancesMulticallViem(net, owner, tokens)` in `src/app/lib/portfolio.ts`  
+  - Deduplicate contract addresses (lowercased).  
+  - Chunk contracts (≈150 per multicall) to keep payloads reasonable.  
+  - Run chunks with small concurrency (≈3) to improve throughput without spamming RPC.  
+  - `allowFailure: true` so non‑standard tokens don’t impact the batch.  
+  - Balance formatting uses decimals from discovery; metadata (name/symbol/logo) is merged from discovery.  
+- Merge + Native: balances merged with discovery metadata; native ETH fetched separately.  
+- Pricing: identical server-side batch (single client call per network).  
+- RPC perf caption: shows elapsed time + estimated RPCs (≈ 1 discovery + ceil(nonSpam/chunk) multicalls + 1 native).  
+- Pricing perf caption: removed for performance.
+
+### Why this is fast & safe
+
+- Fewer RPCs vs per‑token reads; chunked multicalls reduce payload risk; concurrency increases throughput.  
+- Server-side pricing batch with retry/backoff/cache avoids client fan‑out to CoinGecko.  
+- No changes to UI/UX; tokens and amounts render immediately; Ether remains immediate; pricing fills in as available.  
+- No cross‑approach interference; switching tabs yields identical portfolios.
+
+---
+
+## Changes & Changelog (recent)
+
+### Networks
+- Removed Base from network selector; current networks: Mainnet and Arbitrum.
+
+### UX
+- Ether price appears immediately (native price cached/deduped).  
+- Tokens without pricing data show `n/a` (Amount always shown).  
+- Sorting by USD desc; unpriced/spam rows sink to bottom.

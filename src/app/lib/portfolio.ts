@@ -250,6 +250,18 @@ function viemChainFor(net: SupportedNetwork) {
   }
 }
 
+// Cache a viem public client per network to avoid transport re-initialization overhead
+// via viem docs: https://viem.sh/docs/clients/public
+const _publicClientByNet: Partial<Record<SupportedNetwork, ReturnType<typeof createPublicClient>>> = {};
+function getPublicClient(net: SupportedNetwork) {
+  const cached = _publicClientByNet[net];
+  if (cached) return cached;
+  const rpcUrl = getAlchemyRpcUrl(net);
+  const client = createPublicClient({ chain: viemChainFor(net), transport: http(rpcUrl) });
+  _publicClientByNet[net] = client;
+  return client;
+}
+
 export async function fetchIndividualBalancesViem(
   net: SupportedNetwork,
   owner: string,
@@ -307,8 +319,7 @@ export async function fetchBalancesMulticallViem(
   tokens: { address: string; decimals?: number }[]
 ): Promise<PortfolioToken[]> {
   if (!tokens?.length) return [];
-  const rpcUrl = getAlchemyRpcUrl(net);
-  const client = createPublicClient({ chain: viemChainFor(net), transport: http(rpcUrl) });
+  const client = getPublicClient(net);
 
   // De‑duplicate addresses (lowercased) to prevent wasted calls.
   const uniqMap = new Map<string, { address: string; decimals?: number }>();
@@ -319,13 +330,20 @@ export async function fetchBalancesMulticallViem(
   const uniq = Array.from(uniqMap.values());
 
   // Chunk contracts to avoid overly-large multicalls on some RPCs.
-  const BATCH_SIZE = 150;
+  // Adaptive sizing stabilizes latency for small/medium portfolios.
+  const chooseBatchSize = (n: number) => {
+    if (n <= 12) return n; // tiny portfolios → single, very small multicall
+    if (n <= 60) return 40; // small → keep calldata light
+    if (n <= 200) return 100; // medium → balance calls vs payload
+    return 120; // large → still below previous 150 to reduce tail latency
+  };
+  const BATCH_SIZE = chooseBatchSize(uniq.length);
   const chunks: { address: string; decimals?: number }[][] = [];
   for (let i = 0; i < uniq.length; i += BATCH_SIZE) chunks.push(uniq.slice(i, i + BATCH_SIZE));
 
   const out: PortfolioToken[] = [];
   // Small concurrency to improve throughput while staying polite to RPC provider.
-  const CONCURRENCY = 3;
+  const CONCURRENCY = chunks.length === 1 ? 1 : Math.min(3, chunks.length);
   let index = 0;
   const worker = async () => {
     while (index < chunks.length) {
@@ -338,6 +356,8 @@ export async function fetchBalancesMulticallViem(
         args: [owner as `0x${string}`],
       }));
 
+      // Single on-chain batch read, tolerant to individual token failures
+      // via viem docs: https://viem.sh/docs/actions/public/multicall
       const results = await client.multicall({ contracts, allowFailure: true });
       for (let j = 0; j < batch.length; j++) {
         const meta = batch[j];
