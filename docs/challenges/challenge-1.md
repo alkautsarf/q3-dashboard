@@ -198,15 +198,6 @@ Return **already-shaped** arrays for the UI. Components remain dumb/presentation
 
 ---
 
-## Changelog
-
-- 2025-09-11 — perf(batch-rpc): stabilize Approach 2 (Multicall)
-  - Cache a viem public client per network to reuse HTTP transport and reduce setup overhead.  
-  - Adaptive multicall chunk sizes to reduce calldata and EVM execution overhead for small/medium portfolios: `<=12 → N`, `<=60 → 40`, `<=200 → 100`, else `120`.  
-  - Keep `allowFailure: true` and address de-duplication.  
-  - Update RPC caption estimate to reflect adaptive chunking.  
-  - No API/UX/type changes. Behavior preserved; more consistent timings across different token counts.
-
 ## Testing Checklist
 
 - Valid address with multiple tokens (happy path).  
@@ -354,3 +345,11 @@ This approach batches token balance reads using viem multicall to reduce RPC cal
 - Ether price appears immediately (native price cached/deduped).  
 - Tokens without pricing data show `n/a` (Amount always shown).  
 - Sorting by USD desc; unpriced/spam rows sink to bottom.
+
+### 2025-09-11
+  — perf(batch-rpc): stabilize Approach 2 (Multicall)
+  - Cache a viem public client per network to reuse HTTP transport and reduce setup overhead.  
+  - Adaptive multicall chunk sizes to reduce calldata and EVM execution overhead for small/medium portfolios: `<=12 → N`, `<=60 → 40`, `<=200 → 100`, else `120`.  
+  - Keep `allowFailure: true` and address de-duplication.  
+  - Update RPC caption estimate to reflect adaptive chunking.  
+  - No API/UX/type changes. Behavior preserved; more consistent timings across different token counts.
