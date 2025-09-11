@@ -622,6 +622,16 @@ export default function Challenge1Page() {
     queryFn: async () => resolveEnsName(connectedAddress as string),
   });
 
+  // Prefill search input with connected identity (ENS preferred),
+  // but never overwrite user-typed content.
+  useEffect(() => {
+    if (!connectedAddress) return;
+    setSearchText((prev) => {
+      if (prev && prev.trim().length > 0) return prev;
+      return connectedEns || connectedAddress;
+    });
+  }, [connectedAddress, connectedEns]);
+
   // Prefetch Approach 1 for all networks on search submit to make switching instant.
   const qMain = useQuery({
     queryKey: ["portfolio", "individual", "mainnet", effectiveAddress],
@@ -641,96 +651,95 @@ export default function Challenge1Page() {
   });
 
   return (
-    <div className="min-h-screen bg-white text-black font-body">
-      {/* Navbar */}
-      <nav className="flex justify-between items-center px-6 py-4 border-b border-gray-400">
-        <h1 className="font-heading text-xl">Challenge 1: Portfolio Indexer</h1>
-        <div className="flex items-center gap-3">
-          {connectedAddress && (
-            <span className="text-xs text-gray-600">
-              {connectedEns || `${connectedAddress.slice(0, 6)}…${connectedAddress.slice(-4)}`}
-            </span>
-          )}
-          <ConnectButtonCustom />
-        </div>
-      </nav>
+    <div className="min-h-screen bg-white text-black font-body relative">
+      {/* Clean top-right connect button */}
+      <div className="absolute top-4 right-4 z-20"><ConnectButtonCustom /></div>
 
       <main className="p-6">
-        {/* 🔎 Global Search Bar + Switch */}
-        <div className="flex items-center justify-between mb-6 gap-4">
-          {/* Search */}
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              setSearchError(null);
-              const trimmed = searchText.trim();
-              if (trimmed) {
-                if (isAddress(trimmed)) {
-                  setQueryAddress(trimmed);
-                  return;
-                }
-                // Try ENS resolution when input is not a hex address
-                const resolved = await resolveEnsAddress(trimmed);
-                if (resolved && isAddress(resolved)) {
-                  setQueryAddress(resolved);
-                  return;
-                }
-                setSearchError("Invalid address or ENS name");
-                return;
-              }
-              if (!trimmed && connectedAddress) {
-                setQueryAddress(connectedAddress);
-                return;
-              }
-              setQueryAddress("");
-              setSearchError("Enter a valid address or connect a wallet");
-            }}
-            className="flex items-center gap-2 flex-1"
-          >
-            <input
-              type="text"
-              placeholder="Enter wallet address..."
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              className="w-full md:w-[400px] px-4 py-2 border border-gray-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            />
-            <button
-              type="submit"
-              className="px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition cursor-pointer"
-            >
-              Search
-            </button>
-          </form>
-          {searchError && (
-            <p className="text-xs text-red-600 ml-2">{searchError}</p>
-          )}
+        {/* Header */}
+        <div className="max-w-6xl mx-auto mb-6">
+          <h1 className="text-2xl font-semibold tracking-tight">Challenge 1 — Portfolio Indexer</h1>
+          <p className="text-sm text-gray-600 mt-1">Search any address, compare approaches, and inspect holdings.</p>
+        </div>
 
-          {/* Network Selector + Filter + Switch (SlideTabs) */}
-          <div className="flex items-center gap-4 shrink-0">
-            <NetworkSelector value={network} onChange={setNetwork} />
-            <label className="flex items-center gap-2 text-sm text-black">
+        {/* Controls Card */}
+        <div className="max-w-6xl mx-auto mb-6 border border-gray-200 rounded-xl p-4 bg-white/80 backdrop-blur-sm">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            {/* Search */}
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                setSearchError(null);
+                const trimmed = searchText.trim();
+                if (trimmed) {
+                  if (isAddress(trimmed)) {
+                    setQueryAddress(trimmed);
+                    return;
+                  }
+                  const resolved = await resolveEnsAddress(trimmed);
+                  if (resolved && isAddress(resolved)) {
+                    setQueryAddress(resolved);
+                    return;
+                  }
+                  setSearchError("Invalid address or ENS name");
+                  return;
+                }
+                if (!trimmed && connectedAddress) {
+                  setQueryAddress(connectedAddress);
+                  return;
+                }
+                setQueryAddress("");
+                setSearchError("Enter a valid address or connect a wallet");
+              }}
+              className="flex items-center gap-2 flex-1 min-w-[260px]"
+            >
               <input
-                type="checkbox"
-                className="accent-black cursor-pointer"
-                checked={hideSpam}
-                onChange={(e) => setHideSpam(e.target.checked)}
+                type="text"
+                placeholder="Enter wallet address..."
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                className="w-full md:w-[420px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
               />
-              Hide Spam Tokens
-            </label>
-            <SlideTabs tabs={approaches} onTabClick={(index) => setActive(index)} />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-black text-white rounded-lg hover:opacity-90 transition cursor-pointer"
+              >
+                Search
+              </button>
+              {searchError && (
+                <p className="text-xs text-red-600 ml-2">{searchError}</p>
+              )}
+            </form>
+
+            {/* Network + Filter + Tabs */}
+            <div className="flex items-center gap-4">
+              <NetworkSelector value={network} onChange={setNetwork} />
+              <label className="flex items-center gap-2 text-sm text-black">
+                <input
+                  type="checkbox"
+                  className="accent-black cursor-pointer"
+                  checked={hideSpam}
+                  onChange={(e) => setHideSpam(e.target.checked)}
+                />
+                Hide Spam Tokens
+              </label>
+              <SlideTabs tabs={approaches} onTabClick={(index) => setActive(index)} />
+            </div>
           </div>
         </div>
 
         {/* Render approaches */}
-        {active === 0 && effectiveAddress && (
-          <Approach1 address={effectiveAddress} net={network} hideSpam={hideSpam} />
-        )}
-        {active === 1 && effectiveAddress && (
-          <Approach2 address={effectiveAddress} net={network} hideSpam={hideSpam} />
-        )}
-        {active === 2 && effectiveAddress && (
-          <Approach3 address={effectiveAddress} net={network} hideSpam={hideSpam} />
-        )}
+        <div className="max-w-6xl mx-auto">
+          {active === 0 && effectiveAddress && (
+            <Approach1 address={effectiveAddress} net={network} hideSpam={hideSpam} />
+          )}
+          {active === 1 && effectiveAddress && (
+            <Approach2 address={effectiveAddress} net={network} hideSpam={hideSpam} />
+          )}
+          {active === 2 && effectiveAddress && (
+            <Approach3 address={effectiveAddress} net={network} hideSpam={hideSpam} />
+          )}
+        </div>
       </main>
     </div>
   );

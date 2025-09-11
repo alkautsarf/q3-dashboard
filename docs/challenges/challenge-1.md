@@ -394,7 +394,15 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   - Client: `fetchSmartContractBalances` in `src/app/lib/portfolio.ts` with adaptive chunking + dedupe.  
   - UI: “Smart Contract” tab implemented; identical pricing/logos/sorting and perf caption.
 
+
 ### 2025-09-11
   — ux: hide address heading above holdings table
   - Removed the top-left address/ENS heading in all approaches to declutter the table.  
   - No functional changes; captions and totals remain visible.
+
+### 2025-09-12
+  — ui(challenge1): cleaner layout + sticky tabs cursor
+  - Remove navbar; move connect button to subtle top-right overlay.  
+  - Add compact controls card: search + network selector + spam toggle + approach tabs.  
+  - SlideTabs: cursor now persists on the selected tab and returns to it on mouseleave; smooth hover animation retained.  
+  - No functional changes to fetching, ENS, or pricing.
