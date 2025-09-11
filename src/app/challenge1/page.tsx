@@ -622,15 +622,29 @@ export default function Challenge1Page() {
     queryFn: async () => resolveEnsName(connectedAddress as string),
   });
 
-  // Prefill search input with connected identity (ENS preferred),
-  // but never overwrite user-typed content.
+  // Prefill search with connected identity (ENS preferred), without stomping user input.
+  // If the field currently shows the raw connected address and ENS resolves later, update to ENS.
   useEffect(() => {
     if (!connectedAddress) return;
     setSearchText((prev) => {
-      if (prev && prev.trim().length > 0) return prev;
-      return connectedEns || connectedAddress;
+      if (connectedEns) {
+        if (!prev || prev === connectedAddress) return connectedEns;
+        return prev;
+      }
+      return prev && prev.trim().length > 0 ? prev : connectedAddress;
     });
   }, [connectedAddress, connectedEns]);
+
+  // Truncate address visually in the input when not focused; keep full value in state.
+  const [searchFocused, setSearchFocused] = useState(false);
+  const displaySearchText = useMemo(() => {
+    if (searchFocused) return searchText;
+    if (connectedEns && searchText === connectedEns) return searchText;
+    if (connectedAddress && isAddress(searchText) && searchText.toLowerCase() === connectedAddress.toLowerCase()) {
+      return `${searchText.slice(0, 6)}…${searchText.slice(-4)}`;
+    }
+    return searchText;
+  }, [searchText, searchFocused, connectedAddress, connectedEns]);
 
   // Prefetch Approach 1 for all networks on search submit to make switching instant.
   const qMain = useQuery({
@@ -696,8 +710,10 @@ export default function Challenge1Page() {
               <input
                 type="text"
                 placeholder="Enter wallet address..."
-                value={searchText}
+                value={displaySearchText}
                 onChange={(e) => setSearchText(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => setSearchFocused(false)}
                 className="w-full md:w-[420px] px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
               />
               <button
@@ -726,6 +742,11 @@ export default function Challenge1Page() {
               <SlideTabs tabs={approaches} onTabClick={(index) => setActive(index)} />
             </div>
           </div>
+
+          {/* Helper text */}
+          {(!effectiveAddress) && (
+            <div className="mt-2 text-xs text-gray-600">Tip: connect a wallet or paste an address to begin.</div>
+          )}
         </div>
 
         {/* Render approaches */}

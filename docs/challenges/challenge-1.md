@@ -406,3 +406,9 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   - Add compact controls card: search + network selector + spam toggle + approach tabs.  
   - SlideTabs: cursor now persists on the selected tab and returns to it on mouseleave; smooth hover animation retained.  
   - No functional changes to fetching, ENS, or pricing.
+
+### 2025-09-12
+  — ui(challenge1): search input prefills with connected identity
+  - Auto-fill search with connected ENS (preferred) or address when empty; if ENS resolves later, it replaces the raw address.  
+  - Truncate the connected address in the input when not focused (0x1234…abcd), show full value on focus for editing.  
+  - Pure UI change; fetching logic and approach behavior unchanged.
