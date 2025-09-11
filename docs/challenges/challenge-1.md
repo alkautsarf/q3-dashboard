@@ -412,3 +412,9 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   - Auto-fill search with connected ENS (preferred) or address when empty; if ENS resolves later, it replaces the raw address.  
   - Truncate the connected address in the input when not focused (0x1234…abcd), show full value on focus for editing.  
   - Pure UI change; fetching logic and approach behavior unchanged.
+
+### 2025-09-12
+  — ui(network-selector): height + animation parity with SlideTabs
+  - NetworkSelector uses the same spring cursor animation pattern and blend styling as SlideTabs.  
+  - Adjust padding to match tab height visually (px-4 py-2), keeping smooth interactions.  
+  - No functional changes to network switching.

@@ -55,7 +55,7 @@ export function NetworkSelector({ value, onChange }: NetworkSelectorProps) {
             onChange(opt);
           }}
           aria-selected={value === opt}
-          className="relative z-10 block cursor-pointer px-3 py-1.5 text-sm uppercase text-white mix-blend-difference select-none"
+          className="relative z-10 block cursor-pointer px-4 py-2 text-sm uppercase text-white mix-blend-difference select-none"
         >
           {labels[opt]}
         </li>
