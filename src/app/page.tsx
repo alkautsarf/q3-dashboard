@@ -1,9 +1,53 @@
+'use client'
 import Image from "next/image";
+import Background from "@/app/components/Background";
+import StaggeredMenu from "@/app/components/Menu";
+
+const menuItems = [
+  { label: "Challenge", ariaLabel: "Go to home page", link: "/challenge1" },
+  { label: "Challenge", ariaLabel: "Learn about us", link: "/challenge2" },
+  { label: "Challenge", ariaLabel: "View our services", link: "/challenge3" },
+  { label: "Challenge", ariaLabel: "Get in touch", link: "/challenge4" },
+];
+
+const socialItems = [
+  { label: "Twitter", link: "https://twitter.com" },
+  { label: "GitHub", link: "https://github.com/alkautsarf/" },
+  { label: "LinkedIn", link: "https://linkedin.com/in/alkautsar-f" },
+];
 
 export default function Home() {
   return (
     <div className="w-full h-screen relative bg-white">
-  <p className="text-black text-2xl font-bold absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">Liquid Ether</p>
-</div>
+      {/* Overlay Staggered Menu */}
+      <div className="fixed inset-0 z-40 pointer-events-none">
+        <StaggeredMenu
+          className="pointer-events-auto"
+          position="right"
+          items={menuItems}
+          socialItems={socialItems}
+          displaySocials={true}
+          displayItemNumbering={true}
+          menuButtonColor="#000"
+          openMenuButtonColor="#fff"
+          changeMenuColorOnOpen={true}
+          colors={["#B8AA98", "#A59682"]}
+          logoUrl="/icons/eth.svg"
+          accentColor="#A59682"
+          onMenuOpen={() => console.log('Menu opened')}
+          onMenuClose={() => console.log('Menu closed')}
+        />
+      </div>
+      <Background
+        particleColors={["#000000", "#000000"]}
+        particleCount={250}
+        particleSpread={10}
+        speed={0.1}
+        particleBaseSize={100}
+        moveParticlesOnHover={true}
+        alphaParticles={true}
+        disableRotation={false}
+      />
+    </div>
   );
 }
