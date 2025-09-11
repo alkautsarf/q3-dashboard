@@ -11,6 +11,7 @@ import NetworkSelector, { type NetworkKey } from "@/app/components/NetworkSelect
 import { getAlchemyClient } from "@/app/lib/alchemy";
 import { useQuery, useQueryClient } from "@tanstack/react-query"; // via TanStack Query docs
 import { filterPortfolioTokens } from "@/app/lib/portfolio";
+import { resolveEnsAddress, resolveEnsName } from "@/app/lib/ens";
 import { fetchErc20Prices, fetchNativeEthPrice, fetchTokenLogos } from "@/app/lib/prices";
 
   const approaches = ["Individual", "Batch RPC", "Smart Contract"];
@@ -70,6 +71,14 @@ async function fetchApproach1Core(
 
 function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKey; hideSpam: boolean }) {
   const queryClient = useQueryClient();
+  const { data: ensName } = useQuery({
+    queryKey: ["ens-name", address],
+    enabled: Boolean(address) && isAddress(address),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => resolveEnsName(address),
+  });
   const { data, isLoading, error } = useQuery({
     queryKey: ["portfolio", "individual", net, address],
     enabled: Boolean(address),
@@ -200,7 +209,6 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
 
   return (
     <div>
-      <h2 className="font-heading text-lg mb-2">{address}</h2>
       {error && (
         <p className="text-sm text-red-600 mb-2">Failed to fetch balances</p>
       )}
@@ -228,6 +236,14 @@ function Approach1({ address, net, hideSpam }: { address: string; net: NetworkKe
 // ---------------------
 function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKey; hideSpam: boolean }) {
   const queryClient = useQueryClient();
+  const { data: ensName } = useQuery({
+    queryKey: ["ens-name", address],
+    enabled: Boolean(address) && isAddress(address),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => resolveEnsName(address),
+  });
   const { data, isLoading, error } = useQuery({
     queryKey: ["portfolio", "batch", net, address],
     enabled: Boolean(address),
@@ -384,7 +400,6 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
 
   return (
     <div>
-      <h2 className="font-heading text-lg mb-2">{address}</h2>
       {error && <p className="text-sm text-red-600 mb-2">Failed to fetch balances</p>}
       {isLoading ? (
         <p className="text-sm text-gray-600">Loading balances…</p>
@@ -409,6 +424,14 @@ function Approach2({ address, net, hideSpam }: { address: string; net: NetworkKe
 function Approach3({ address, net, hideSpam }: { address: string; net: NetworkKey; hideSpam: boolean }) {
   const queryClient = useQueryClient();
   const reader = process.env.NEXT_PUBLIC_C1_ADDRESS;
+  const { data: ensName } = useQuery({
+    queryKey: ["ens-name", address],
+    enabled: Boolean(address) && isAddress(address),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => resolveEnsName(address),
+  });
   const { data, isLoading, error } = useQuery({
     queryKey: ["portfolio", "contract", net, address],
     enabled: Boolean(address) && Boolean(reader),
@@ -551,7 +574,6 @@ function Approach3({ address, net, hideSpam }: { address: string; net: NetworkKe
 
   return (
     <div>
-      <h2 className="font-heading text-lg mb-2">{address}</h2>
       {(!reader || error) && <p className="text-sm text-red-600 mb-2">{!reader ? "Missing BalanceReader address" : "Failed to fetch balances"}</p>}
       {isLoading ? (
         <p className="text-sm text-gray-600">Loading balances…</p>
@@ -584,7 +606,21 @@ export default function Challenge1Page() {
   const [hideSpam, setHideSpam] = useState(true);
   // removed Show zero balances feature for now
 
-  const effectiveAddress = queryAddress;
+  // Use connected wallet as default effective address when no explicit query submitted
+  const effectiveAddress = useMemo(
+    () => (queryAddress && queryAddress.length > 0 ? queryAddress : (connectedAddress ?? "")),
+    [queryAddress, connectedAddress]
+  );
+
+  // Resolve ENS for connected wallet (used as small label in navbar)
+  const { data: connectedEns } = useQuery({
+    queryKey: ["ens-name", connectedAddress],
+    enabled: Boolean(connectedAddress) && isAddress(connectedAddress as string),
+    staleTime: 10 * 60_000,
+    gcTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => resolveEnsName(connectedAddress as string),
+  });
 
   // Prefetch Approach 1 for all networks on search submit to make switching instant.
   const qMain = useQuery({
@@ -609,7 +645,14 @@ export default function Challenge1Page() {
       {/* Navbar */}
       <nav className="flex justify-between items-center px-6 py-4 border-b border-gray-400">
         <h1 className="font-heading text-xl">Challenge 1: Portfolio Indexer</h1>
-        <ConnectButtonCustom />
+        <div className="flex items-center gap-3">
+          {connectedAddress && (
+            <span className="text-xs text-gray-600">
+              {connectedEns || `${connectedAddress.slice(0, 6)}…${connectedAddress.slice(-4)}`}
+            </span>
+          )}
+          <ConnectButtonCustom />
+        </div>
       </nav>
 
       <main className="p-6">
@@ -617,12 +660,22 @@ export default function Challenge1Page() {
         <div className="flex items-center justify-between mb-6 gap-4">
           {/* Search */}
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
               setSearchError(null);
               const trimmed = searchText.trim();
-              if (trimmed && isAddress(trimmed)) {
-                setQueryAddress(trimmed);
+              if (trimmed) {
+                if (isAddress(trimmed)) {
+                  setQueryAddress(trimmed);
+                  return;
+                }
+                // Try ENS resolution when input is not a hex address
+                const resolved = await resolveEnsAddress(trimmed);
+                if (resolved && isAddress(resolved)) {
+                  setQueryAddress(resolved);
+                  return;
+                }
+                setSearchError("Invalid address or ENS name");
                 return;
               }
               if (!trimmed && connectedAddress) {

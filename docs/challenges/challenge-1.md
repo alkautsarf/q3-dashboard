@@ -393,3 +393,8 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   - Deploy to Mainnet + Arbitrum at the same address via CREATE2; expose `NEXT_PUBLIC_C1_ADDRESS`.  
   - Client: `fetchSmartContractBalances` in `src/app/lib/portfolio.ts` with adaptive chunking + dedupe.  
   - UI: “Smart Contract” tab implemented; identical pricing/logos/sorting and perf caption.
+
+### 2025-09-11
+  — ux: hide address heading above holdings table
+  - Removed the top-left address/ENS heading in all approaches to declutter the table.  
+  - No functional changes; captions and totals remain visible.
