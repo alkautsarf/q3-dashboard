@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import type { SupportedNetwork } from "@/app/lib/alchemy";
 
 export type NetworkKey = SupportedNetwork;
@@ -18,21 +19,53 @@ const labels: Record<NetworkKey, string> = {
 
 export function NetworkSelector({ value, onChange }: NetworkSelectorProps) {
   const options: NetworkKey[] = ["mainnet", "arbitrum"];
+
+  // Animated cursor logic (mirrors SlideTabs behavior)
+  type Position = { left: number; width: number; height: number; opacity: number };
+  const [position, setPosition] = useState<Position>({ left: 0, width: 0, height: 0, opacity: 0 });
+  const tabRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const activeIndex = useMemo(() => Math.max(0, options.indexOf(value)), [options, value]);
+
+  const moveToIndex = (idx: number, show = true) => {
+    const el = tabRefs.current[idx];
+    if (!el) return;
+    const { width, height } = el.getBoundingClientRect();
+    setPosition({ left: el.offsetLeft, width, height, opacity: show ? 1 : 0 });
+  };
+
+  useEffect(() => {
+    moveToIndex(activeIndex, true);
+    const onResize = () => moveToIndex(activeIndex, true);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [activeIndex]);
+
   return (
-    <div className="flex items-center gap-2 border border-gray-400 rounded-full p-1 bg-white">
-      {options.map((opt) => (
-        <button
+    <ul
+      onMouseLeave={() => moveToIndex(activeIndex, true)}
+      className="relative mx-auto flex w-fit rounded-full border-2 border-black bg-white p-1"
+    >
+      {options.map((opt, idx) => (
+        <li
           key={opt}
-          type="button"
-          onClick={() => onChange(opt)}
-          className={`px-3 py-1 text-sm rounded-full transition cursor-pointer ${
-            value === opt ? "bg-black text-white" : "text-black hover:bg-gray-100"
-          }`}
+          ref={(el) => (tabRefs.current[idx] = el)}
+          onMouseEnter={() => moveToIndex(idx, true)}
+          onClick={() => {
+            moveToIndex(idx, true);
+            onChange(opt);
+          }}
+          aria-selected={value === opt}
+          className="relative z-10 block cursor-pointer px-3 py-1.5 text-sm uppercase text-white mix-blend-difference select-none"
         >
           {labels[opt]}
-        </button>
+        </li>
       ))}
-    </div>
+      <motion.li
+        animate={{ left: position.left, width: position.width, height: position.height, opacity: position.opacity }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="absolute z-0 rounded-full bg-black"
+      />
+    </ul>
   );
 }
 
