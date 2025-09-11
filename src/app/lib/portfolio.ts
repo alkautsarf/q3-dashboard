@@ -377,6 +377,82 @@ export async function fetchBalancesMulticallViem(
   return out;
 }
 
+// ------------------------------
+// Approach 3: Smart-Contract Batch (BalanceReader)
+// ------------------------------
+
+// Minimal ABI for BalanceReader.batchBalanceOf(address,address[])
+// via viem readContract docs: https://viem.sh/docs/actions/public/readContract
+const balanceReaderAbi = [
+  {
+    type: "function",
+    name: "batchBalanceOf",
+    stateMutability: "view",
+    inputs: [
+      { name: "owner", type: "address" },
+      { name: "tokens", type: "address[]" },
+    ],
+    outputs: [{ name: "balances", type: "uint256[]" }],
+  },
+] as const;
+
+export async function fetchSmartContractBalances(
+  net: SupportedNetwork,
+  owner: string,
+  tokens: { address: string; decimals?: number }[],
+  readerAddress: string
+): Promise<PortfolioToken[]> {
+  if (!tokens?.length) return [];
+  const client = getPublicClient(net);
+
+  // Deduplicate input addresses (lowercased) to avoid redundant work
+  const uniqMap = new Map<string, { address: string; decimals?: number }>();
+  for (const t of tokens) {
+    const k = String(t.address).toLowerCase();
+    if (!uniqMap.has(k)) uniqMap.set(k, t);
+  }
+  const uniq = Array.from(uniqMap.values());
+
+  // Chunk addresses to keep calldata reasonable
+  const chooseBatchSize = (n: number) => {
+    if (n <= 12) return n;
+    if (n <= 60) return 40;
+    if (n <= 200) return 100;
+    return 120;
+  };
+  const BATCH_SIZE = chooseBatchSize(uniq.length);
+  const chunks: { address: string; decimals?: number }[][] = [];
+  for (let i = 0; i < uniq.length; i += BATCH_SIZE) chunks.push(uniq.slice(i, i + BATCH_SIZE));
+
+  const out: PortfolioToken[] = [];
+  for (const batch of chunks) {
+    try {
+      const addresses = batch.map((t) => t.address as `0x${string}`);
+      const balances = (await client.readContract({
+        address: readerAddress as `0x${string}`,
+        abi: balanceReaderAbi,
+        functionName: "batchBalanceOf",
+        args: [owner as `0x${string}` , addresses],
+      })) as readonly bigint[];
+
+      for (let i = 0; i < batch.length; i++) {
+        const meta = batch[i];
+        const raw = balances[i] ?? 0n;
+        const dec = typeof meta.decimals === "number" ? meta.decimals : 18;
+        const balanceStr = formatUnits(raw, dec);
+        const balance = Number(balanceStr);
+        out.push({ address: meta.address, name: "", symbol: "", balance, balanceStr, decimals: dec });
+      }
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn("[portfolio] BalanceReader batch failed", e);
+      // On failure, continue with other batches; zeros will be implied for this chunk.
+    }
+  }
+
+  return out;
+}
+
 // Merge two token arrays by address (lowercased). Prefer values from `fresh`
 // for balance-related fields, and preserve presentational metadata from
 // `discovered` when available (logo, symbol, name).
@@ -410,13 +486,4 @@ export function mergeTokenData(
     merged.push(combined);
   }
   return merged;
-}
-
-// Placeholder for other approaches
-export async function fetchBatchBalances(/* args */) {
-  return [];
-}
-
-export async function fetchSmartContractBalances(/* args */) {
-  return [];
 }

@@ -336,6 +336,39 @@ This approach batches token balance reads using viem multicall to reduce RPC cal
 
 ---
 
+## Approach 3 — Smart‑Contract Batch (Solidity)
+
+This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` calls into fewer RPCs while preserving the same UI and data shape.
+
+### Contract
+
+- `BalanceReader.sol` exposes:  
+  `function batchBalanceOf(address owner, address[] tokens) external view returns (uint256[] balances)`  
+  Tolerant to non‑standard tokens via `try/catch` (0 on failure).  
+- Deployed at the same address on Mainnet and Arbitrum using CREATE2:  
+  `0xED259223F06eC265A80376251E483657572c10BD`  
+  - Configure via `NEXT_PUBLIC_C1_ADDRESS` in `.env`.
+- Source: `src/app/solidity/challenge-1/src/BalanceReader.sol` (Foundry project).
+
+### Client Integration (What we shipped)
+
+- Discovery & Filtering: same as other approaches (Alchemy, heuristics, zero hide).  
+- Batch read: `fetchSmartContractBalances(net, owner, tokens, readerAddress)` in `src/app/lib/portfolio.ts` calls `batchBalanceOf` via viem:  
+  - Deduplicates addresses (lowercased).  
+  - Adaptive chunking (`≤12 → N`, `≤60 → 40`, `≤200 → 100`, else `120`).  
+  - Formats with decimals from discovery; merge with metadata via `mergeTokenData`.  
+- Native ETH, pricing, logos, sorting: identical behavior to Approaches 1 and 2.  
+- Perf caption: “Smart Contract — <ms>ms, ~<N> RPC” (≈ 1 discovery + ceil(nonSpam/chunk) + 1 native).
+
+### Quick Verify
+
+1) Ensure `.env` has `NEXT_PUBLIC_C1_ADDRESS=0xED259223F06eC265A80376251E483657572c10BD`.  
+2) `npm run dev` → `/challenge1` → search a wallet.  
+3) Switch to “Smart Contract” tab; balances should match other tabs and pricing fills in the same way.  
+4) Perf caption should show small RPC counts and consistent timing.
+
+---
+
 ## Changes & Changelog (recent)
 
 ### Networks
@@ -353,3 +386,10 @@ This approach batches token balance reads using viem multicall to reduce RPC cal
   - Keep `allowFailure: true` and address de-duplication.  
   - Update RPC caption estimate to reflect adaptive chunking.  
   - No API/UX/type changes. Behavior preserved; more consistent timings across different token counts.
+
+### 2025-09-11
+  — feat(approach3): Smart‑Contract Batch wired
+  - Add Foundry project under `src/app/solidity/challenge-1/` with `BalanceReader.sol` (batchBalanceOf).  
+  - Deploy to Mainnet + Arbitrum at the same address via CREATE2; expose `NEXT_PUBLIC_C1_ADDRESS`.  
+  - Client: `fetchSmartContractBalances` in `src/app/lib/portfolio.ts` with adaptive chunking + dedupe.  
+  - UI: “Smart Contract” tab implemented; identical pricing/logos/sorting and perf caption.
