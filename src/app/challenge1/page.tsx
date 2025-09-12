@@ -976,7 +976,7 @@ export default function Challenge1Page() {
                 onChange={(e) => setSearchText(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
                 onBlur={() => setSearchFocused(false)}
-                className="w-full md:w-[420px] px-4 py-2 border-2 border-black rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+                className="w-full md:w-[420px] px-4 py-2 border-2 border-black rounded-lg focus:outline-none focus:ring-black"
               />
               <button
                 type="submit"
