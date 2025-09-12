@@ -418,3 +418,9 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   - NetworkSelector uses the same spring cursor animation pattern and blend styling as SlideTabs.  
   - Adjust padding to match tab height visually (px-4 py-2), keeping smooth interactions.  
   - No functional changes to network switching.
+
+### 2025-09-12
+  — ui(menu): mobile overlay polish (logo + close alignment)
+  - Hide header logo only when the mobile/tablet menu overlay is open to avoid visual overlap, keep it visible on desktop.  
+  - Preserve close button position by forcing header alignment to flex-end on small screens when open.  
+  - Pure styling changes; no logic or layout shifts on desktop.
