@@ -246,4 +246,9 @@ Each state defines what input is valid and which transitions are possible.
   - Add test documentation at `src/app/solidity/challenge-2/docs/testing.md` explaining each case and coverage notes.
   - Adjust tests to pass tokens as `IERC20(address(token))` to match the interface declared in `Disperse.sol` and avoid invalid explicit casts.
 
+  - Scaffold frontend architecture for Challenge 2:
+    - Components: `Terminal.tsx`, `CommandHandler.tsx`, `Receipt.tsx`, `TxStatus.tsx`, optional `TerminalLog.tsx`.
+    - Lib placeholders: `lib/disperse.ts` (send/estimate/approve/checkAllowance stubs), `lib/utils/validators.ts`.
+    - Page wiring: `src/app/challenge2/page.tsx` renders `<Terminal />`.
+    - No logic yet — placeholders created to keep build green and align with architecture.
 
