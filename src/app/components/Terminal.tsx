@@ -4,14 +4,7 @@ import TerminalLog from "./TerminalLog";
 import Receipt from "./Receipt";
 import TxStatus from "./TxStatus";
 import { parseRecipientLine, isAddress } from "../lib/utils/validators";
-import {
-  useAccount,
-  useDisconnect,
-  usePublicClient,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-  useEnsName,
-} from "wagmi";
+import { useAccount, useDisconnect, usePublicClient, useWriteContract, useEnsName } from "wagmi";
 import { useConnectModal } from "@rainbow-me/rainbowkit"; // via RainbowKit docs
 import { arbitrum, mainnet } from "wagmi/chains";
 import type { Address, PublicClient } from "viem";
@@ -65,9 +58,7 @@ export default function Terminal() {
   const [remaining, setRemaining] = React.useState<string | undefined>();
   const [totalDisplay, setTotalDisplay] = React.useState<string>("0");
   const [txHash, setTxHash] = React.useState<`0x${string}` | undefined>();
-  const [txStatus, setTxStatus] = React.useState<
-    "idle" | "pending" | "success" | "fail"
-  >("idle");
+  // Tx status is monitored by <TxStatus />
   const idRef = React.useRef(2);
   const [clock, setClock] = React.useState<string>("");
   const { data: connectedEns } = useEnsName({ address, chainId: mainnet.id }); // via wagmi docs: useEnsName
@@ -125,25 +116,7 @@ export default function Terminal() {
     pushNode(<span>{text}</span>);
   }
 
-  // Track receipt updates for tx hash
-  const wait = useWaitForTransactionReceipt({
-    hash: txHash,
-    chainId: selectedChainId,
-  });
-  React.useEffect(() => {
-    if (!txHash) return;
-    if (wait.status === "success") {
-      setTxStatus("success");
-      pushNode(
-        <span className="text-green-600">
-          BatchSent success: <span className="font-mono">{txHash}</span>
-        </span>
-      );
-    } else if (wait.status === "error") {
-      setTxStatus("fail");
-      pushNode(<span className="text-red-600">Transaction failed.</span>);
-    }
-  }, [wait.status, txHash]);
+  // Removed Terminal-level tx monitoring; handled by <TxStatus />.
 
   function onEnter(cmd: string) {
     const trimmed = cmd.trim();
@@ -473,7 +446,6 @@ export default function Terminal() {
                 <span className="text-gray-600">Approval needed for {tokenSymbol}. Opening wallet…</span>
               );
               try {
-                console.log(total)
                 const approvalTx = await approveErc20(writeContractAsync, {
                   token: tokenAddress,
                   owner: address,
@@ -481,9 +453,8 @@ export default function Terminal() {
                   amount: total,
                   chainId: selectedChainId,
                 });
-                pushNode(
-                  <span className="text-gray-600">Approval tx: <span className="font-mono">{approvalTx}</span></span>
-                );
+                // Show approval tx status with explorer link
+                pushNode(<TxStatus label="Approval" chainId={selectedChainId} txHash={approvalTx} />);
                 const rc = await pub.waitForTransactionReceipt({ hash: approvalTx });
                 if (rc.status !== "success") {
                   pushNode(<span className="text-red-600">ApprovalFailed</span>);
@@ -544,7 +515,6 @@ export default function Terminal() {
                   if (!address) return;
                   const pubClient = publicClient as unknown as PublicClient;
                   const contract = getDisperseAddress();
-                  setTxStatus("pending");
                   if (tokenAddress) {
                     // Preflight balance check (ERC-20)
                     const balNow = (await pubClient.readContract({
@@ -591,11 +561,7 @@ export default function Terminal() {
                         amount: total,
                         chainId: selectedChainId,
                       });
-                      pushNode(
-                        <span className="text-gray-600">
-                          Approval tx: <span className="font-mono">{tx}</span>
-                        </span>
-                      );
+                      pushNode(<TxStatus label="Approval" chainId={selectedChainId} txHash={tx} />);
                       const rc = await pubClient.waitForTransactionReceipt({
                         hash: tx,
                       });
@@ -603,7 +569,6 @@ export default function Terminal() {
                         pushNode(
                           <span className="text-red-600">ApprovalFailed</span>
                         );
-                        setTxStatus("fail");
                         return;
                       }
                     }
@@ -618,7 +583,8 @@ export default function Terminal() {
                     setTxHash(hash);
                     pushNode(
                       <TxStatus
-                        status="pending"
+                        label="Batch"
+                        chainId={selectedChainId}
                         txHash={hash}
                         gasBatch={batch.toString()}
                         gasIndiv={indiv.toString()}
@@ -636,7 +602,8 @@ export default function Terminal() {
                     setTxHash(hash);
                     pushNode(
                       <TxStatus
-                        status="pending"
+                        label="Batch"
+                        chainId={selectedChainId}
                         txHash={hash}
                         gasBatch={batch.toString()}
                         gasIndiv={indiv.toString()}
@@ -650,7 +617,6 @@ export default function Terminal() {
                       {String(err?.shortMessage || err?.message || err)}
                     </span>
                   );
-                  setTxStatus("fail");
                 }
               }}
               onEdit={() => {

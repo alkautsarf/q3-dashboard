@@ -298,3 +298,9 @@ Each state defines what input is valid and which transitions are possible.
   — fix(challenge2): use fresh token decimals on `/done`
   - Root cause: stale `tokenDecimals` defaulting to 18 caused wrong base‑unit conversions (e.g., `0.3` USDC → `300000000000000000`).
   - Solution: on `/done`, query token metadata (`symbol`, `decimals`) from chain and use that `decimals` to convert recipient amounts and totals. UI state is synced non‑blocking.
+
+- 2025-09-12 (later)
+  — ux(challenge2): TxStatus monitors tx + explorer links
+  - Move tx monitoring out of `Terminal.tsx` into `TxStatus` using wagmi `useWaitForTransactionReceipt`.
+  - Add explorer links per network: Etherscan (mainnet) and Arbiscan (Arbitrum) for both approval and batch txs.
+  - Remove inline "BatchSent success" / "Transaction failed" text logs; `TxStatus` displays live status and link instead.
