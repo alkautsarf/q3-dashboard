@@ -252,3 +252,28 @@ Each state defines what input is valid and which transitions are possible.
     - Page wiring: `src/app/challenge2/page.tsx` renders `<Terminal />`.
     - No logic yet — placeholders created to keep build green and align with architecture.
 
+- 2025-09-12 (later)
+  - Implement minimal presentational UI for Terminal:
+    - Header with RainbowKit `ConnectButton` and connection status.
+    - `TerminalLog` scrollback (monospace, zebra rows, black borders), recipients preview, and prompt input.
+    - Handles `/help`, `/token`, `/abort`, `/done`, `/clear` locally (UI only).
+    - Prepared dumb `Receipt` and `TxStatus` components for data binding next.
+
+- 2025-09-12 (later)
+  — feat(challenge2): E2E terminal functionality + network switch
+  - Implement complete flow in `Terminal.tsx`: `/connect`, `/disconnect`, `/token` (allowlist + custom ERC‑20), recipient lines `address=amount`, `/done` receipt with totals, user balance/remaining, live gas estimates (batch vs individual), explicit ERC‑20 approval gate, and single batch transaction. `TxStatus` renders pending → success/fail.
+  - New `/network` command with default `arbitrum`; only Arbitrum enabled until mainnet deployment is available.
+  - Lib: `src/app/lib/disperse.ts` implemented (Disperse + ERC‑20 ABIs, estimate/send/approve/allowance helpers, ERC‑20 metadata reader, unit conversions). Reads `NEXT_PUBLIC_C2_ADDRESS`.
+  - Validators: add `isAddress`; inputs restricted to 0x addresses for recipients.
+
+- 2025-09-12 (later)
+  — fix(challenge2): disable ENS for recipients
+  - Recipient ENS resolution removed to avoid ambiguity across chains; terminal prompts users to paste a 0x address when `.eth` is provided.
+
+- 2025-09-12 (later)
+  — fix(challenge2): balances/estimates via PublicClient
+  - Switch to wagmi `usePublicClient` (viem PublicClient) for `getBalance`, `readContract`, and gas estimation; fixes “pub.getBalance is not a function” during `/done`.
+
+- 2025-09-12 (later)
+  — ui(challenge2): status bar clock + network tag
+  - Bottom status bar shows a real‑time 24h clock `HH:MM:SS DD‑MMM‑YY` and current network tag (`[arb]`). No functional changes.
