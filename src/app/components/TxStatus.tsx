@@ -13,7 +13,7 @@ export default function TxStatus({ status, txHash, gasBatch, gasIndiv }: Props) 
   const color = status === "success" ? "text-green-600" : status === "fail" ? "text-red-600" : "text-black";
   return (
     <div className="border border-black">
-      <div className="px-4 py-2 border-b border-black bg-gray-100 text-sm">Transaction</div>
+      <div className="px-4 py-2 border-b border-black bg-[#B8AA98] text-sm">Transaction</div>
       <div className="p-4 space-y-3 text-sm">
         <div className={color}>Status: {status}</div>
         {txHash && (

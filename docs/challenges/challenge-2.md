@@ -277,3 +277,24 @@ Each state defines what input is valid and which transitions are possible.
 - 2025-09-12 (later)
   — ui(challenge2): status bar clock + network tag
   - Bottom status bar shows a real‑time 24h clock `HH:MM:SS DD‑MMM‑YY` and current network tag (`[arb]`). No functional changes.
+
+- 2025-09-12 (later)
+  — feat(challenge2): ENS + command updates + /clear + hidden scrollbars
+  - Enable ENS: input accepts ENS for recipients; resolves on `/done` via mainnet ENS. Placeholder prefers connected ENS.
+  - Add `/clear` to clear terminal output while keeping token, recipients, and network context. Help text updated.
+  - Hide terminal scrollbar UI (keeps scroll functionality) via `.no-scrollbar` CSS and applied to `TerminalLog` container.
+
+- 2025-09-12 (later)
+  — fix(challenge2): approval triggers reliably when allowance < total
+  - On `/done` (ERC‑20): after balance preflight, check allowance and prompt approval if insufficient. Wait 1 confirmation; on failure log `ApprovalFailed`, on success continue.
+  - On Proceed: re-check balance and allowance just before sending to guard against race conditions.
+
+- 2025-09-12 (later)
+  — fix(challenge2): approvals handle token decimals correctly
+  - lib/disperse.ts: `approveErc20` now accepts `bigint` (base units) or `string + decimals` (parses with `parseUnits`).
+  - lib/disperse.ts: `checkAllowance` can return raw bigint or `{ raw, formatted }` when `decimals` provided (uses `formatUnits`).
+
+- 2025-09-12 (later)
+  — fix(challenge2): use fresh token decimals on `/done`
+  - Root cause: stale `tokenDecimals` defaulting to 18 caused wrong base‑unit conversions (e.g., `0.3` USDC → `300000000000000000`).
+  - Solution: on `/done`, query token metadata (`symbol`, `decimals`) from chain and use that `decimals` to convert recipient amounts and totals. UI state is synced non‑blocking.

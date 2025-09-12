@@ -20,7 +20,7 @@ type Props = {
 export default function Receipt({ token, items, total, userBalance, remaining, gasBatch, gasIndiv, onProceed, onEdit, onAbort }: Props) {
   return (
     <div className="border border-black">
-      <div className="px-4 py-2 border-b border-black bg-gray-100 text-sm">Receipt</div>
+      <div className="px-4 py-2 border-b border-black bg-[#B8AA98] text-sm">Receipt</div>
       <div className="p-4 space-y-4 text-sm text-black">
         <div className="flex items-center gap-3">
           <span className="text-gray-600">Token</span>
@@ -58,9 +58,9 @@ export default function Receipt({ token, items, total, userBalance, remaining, g
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={onProceed} className="px-3 py-1 border border-black bg-white hover:bg-gray-100">Proceed</button>
-          <button onClick={onEdit} className="px-3 py-1 border border-black bg-white hover:bg-gray-100">Edit</button>
-          <button onClick={onAbort} className="px-3 py-1 border border-black bg-white hover:bg-gray-100">Abort</button>
+          <button onClick={onProceed} className="px-3 py-1 border border-black bg-white hover:bg-[#B8AA98]">Proceed</button>
+          <button onClick={onEdit} className="px-3 py-1 border border-black bg-white hover:bg-[#B8AA98]">Edit</button>
+          <button onClick={onAbort} className="px-3 py-1 border border-black bg-white hover:bg-[#B8AA98]">Abort</button>
         </div>
       </div>
     </div>

@@ -24,6 +24,10 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Hide scrollbars UI but keep scroll functionality */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
 /* Liquid glass panel used for the Challenge 2 terminal */
 .glass-panel {
   position: relative;
