@@ -424,3 +424,8 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   - Hide header logo only when the mobile/tablet menu overlay is open to avoid visual overlap, keep it visible on desktop.  
   - Preserve close button position by forcing header alignment to flex-end on small screens when open.  
   - Pure styling changes; no logic or layout shifts on desktop.
+
+### 2025-09-12
+  — ui(challenge1): align Connect button with header
+  - Move Connect button into the header row and center it vertically for consistent alignment with the page title.  
+  - No logic changes — purely layout polish.

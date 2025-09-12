@@ -922,20 +922,20 @@ export default function Challenge1Page() {
 
   return (
     <div className="min-h-screen bg-white text-black font-body relative">
-      {/* Clean top-right connect button */}
-      <div className="absolute top-4 right-4 z-20">
-        <ConnectButtonCustom />
-      </div>
-
       <main className="p-6">
-        {/* Header */}
-        <div className="max-w-6xl mx-auto mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">
-            Challenge 1 — Portfolio Indexer
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Search any address, compare approaches, and inspect holdings.
-          </p>
+        {/* Header + Connect */}
+        <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Challenge 1 — Multi-Read Dashboard
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Search any address, compare approaches, and inspect holdings.
+            </p>
+          </div>
+          <div className="shrink-0 flex items-center">
+            <ConnectButtonCustom />
+          </div>
         </div>
 
         {/* Controls Card */}
@@ -991,7 +991,7 @@ export default function Challenge1Page() {
 
             {/* Network + Filter + Tabs */}
             <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-black rounded-full border-2 border-black px-3 py-1">
+              <label className="flex items-center gap-2 text-sm text-black rounded-full  px-3 py-1">
                 <input
                   type="checkbox"
                   className="accent-black cursor-pointer"
