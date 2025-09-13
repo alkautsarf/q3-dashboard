@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import Background from "../components/Background";
+import StaggeredMenu from "../components/Menu";
 import { SlideTabs } from "@/app/components/SlideTabs";
 import ConnectButtonCustom from "@/app/components/ConnectButton";
 import { useAccount } from "wagmi";
@@ -29,6 +31,20 @@ import {
 } from "@/app/lib/prices";
 
 const approaches = ["Individual", "Batch RPC", "Smart Contract"];
+
+const menuItems = [
+  { label: "Home", ariaLabel: "Go to home page", link: "/" },
+  { label: "Challenge", ariaLabel: "Challenge 1", link: "/challenge1" },
+  { label: "Challenge", ariaLabel: "Challenge 2", link: "/challenge2" },
+  { label: "Challenge", ariaLabel: "Challenge 3", link: "/challenge3" },
+  { label: "Challenge", ariaLabel: "Challenge 4", link: "/challenge4" },
+];
+
+const socialItems = [
+  { label: "Twitter", link: "https://twitter.com" },
+  { label: "GitHub", link: "https://github.com/alkautsarf/" },
+  { label: "LinkedIn", link: "https://linkedin.com/in/alkautsar-f" },
+];
 
 async function fetchApproach1Core(net: NetworkKey, address: string) {
   const client = getAlchemyClient(net);
@@ -921,8 +937,41 @@ export default function Challenge1Page() {
   });
 
   return (
-    <div className="min-h-screen bg-white text-black font-body relative">
-      <main className="p-6">
+    <div className="relative min-h-screen bg-white text-black font-body">
+      {/* Overlay Staggered Menu */}
+      <div className="fixed inset-0 z-40 pointer-events-none">
+        <StaggeredMenu
+          position="right"
+          items={menuItems}
+          socialItems={socialItems}
+          displaySocials={true}
+          displayItemNumbering={true}
+          menuButtonColor="#000"
+          openMenuButtonColor="#fff"
+          changeMenuColorOnOpen={true}
+          colors={["#B8AA98", "#A59682"]}
+          logoUrl="/logo/q3.png"
+          accentColor="#A59682"
+          onMenuOpen={() => console.log("Menu opened")}
+          onMenuClose={() => console.log("Menu closed")}
+        />
+      </div>
+
+      {/* Animated background behind content */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <Background
+          particleColors={["#000000", "#000000"]}
+          particleCount={250}
+          particleSpread={10}
+          speed={0.1}
+          particleBaseSize={100}
+          moveParticlesOnHover={true}
+          alphaParticles={true}
+          disableRotation={false}
+        />
+      </div>
+
+      <main className="relative z-10 p-6">
         {/* Header + Connect */}
         <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
           <div>

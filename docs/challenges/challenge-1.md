@@ -429,3 +429,15 @@ This approach uses an on-chain helper to aggregate many ERC‑20 `balanceOf` cal
   — ui(challenge1): align Connect button with header
   - Move Connect button into the header row and center it vertically for consistent alignment with the page title.  
   - No logic changes — purely layout polish.
+
+### 2025-09-12
+  — ui(challenge1): background canvas + overlay menu
+  - Add animated `Background` canvas and `Menu` overlay to Challenge 1 page.  
+  - Layering fix: background at `z-0`, content at `z-20`, menu overlay at `z-40`; background uses `pointer-events: none` to keep UI interactive.
+  - Resolve background not showing due to negative z-index; ensure canvas renders behind content but above page background.
+
+### 2025-09-12
+  — fix(menu): pointer-events gating + unnumber Home
+  - Gate menu panel pointer events to open state; keep wrapper non-interactive so main page remains clickable when menu is closed.  
+  - Header children (logo/toggle) remain interactive.  
+  - Do not number the first menu item (Home); challenge items start at 01.

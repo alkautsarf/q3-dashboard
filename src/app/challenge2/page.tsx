@@ -24,7 +24,6 @@ export default function Page() {
       {/* Overlay Staggered Menu */}
       <div className="fixed inset-0 z-40 pointer-events-none">
         <StaggeredMenu
-          className="pointer-events-auto"
           position="right"
           items={menuItems}
           socialItems={socialItems}

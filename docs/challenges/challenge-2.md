@@ -312,3 +312,8 @@ Each state defines what input is valid and which transitions are possible.
     - Mainnet: USDT, USDC, PEPE, BNB, LINK, UNI, WETH, SHIB, STETH, USDS, AAVE.
     - Arbitrum: ARB, USDC, PEPE, LINK, UNI, USDS, AAVE.
   - `/token <symbol>` maps to these lists based on the active network; `/token 0x…` still accepts custom ERC-20 addresses.
+
+- 2025-09-12 (later)
+  — ui(menu): pointer-events gating and overlay integration
+  - Ensure the menu wrapper never blocks clicks when closed (`pointer-events: none`), and the panel only receives clicks when open.  
+  - Integrated `Menu` overlay consistently across challenge pages while preserving content interactivity.
