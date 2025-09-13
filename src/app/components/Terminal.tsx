@@ -64,6 +64,35 @@ export default function Terminal() {
   const { data: connectedEns } = useEnsName({ address, chainId: mainnet.id }); // via wagmi docs: useEnsName
   const announcedRef = React.useRef<string | null>(null);
 
+  // Network-aware common token lists
+  const COMMON_TOKENS: Record<number, Record<string, Address>> = React.useMemo(
+    () => ({
+      [mainnet.id]: {
+        usdt: "0xdac17f958d2ee523a2206206994597c13d831ec7" as Address,
+        usdc: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48" as Address,
+        pepe: "0x6982508145454ce325ddbe47a25d4ec3d2311933" as Address,
+        bnb: "0xb8c77482e45f1f44de1745f52c74426c631bdd52" as Address,
+        link: "0x514910771af9ca656af840dff83e8264ecf986ca" as Address,
+        uni: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984" as Address,
+        weth: "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2" as Address,
+        shib: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce" as Address,
+        steth: "0xae7ab96520de3a18e5e111b5eaab095312d7fe84" as Address,
+        usds: "0xdc035d45d973e3ec169d2276ddab16f1e407384f" as Address,
+        aave: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9" as Address,
+      },
+      [arbitrum.id]: {
+        arb: "0x912ce59144191c1204e64559fe8253a0e49e6548" as Address,
+        usdc: "0xaf88d065e77c8cc2239327c5edb3a432268e5831" as Address,
+        pepe: "0x25d887ce7a35172c62febfd67a1856f20faebb00" as Address,
+        link: "0xf97f4df75117a78c1a5a0dbb814af92458539fb4" as Address,
+        uni: "0xfa7f8980b0f1e64a2062791cc3b0871572f1f7f0" as Address,
+        usds: "0x6491c05a82219b8d1479057361ff1654749b876b" as Address,
+        aave: "0xba5ddd1f9d7f570dc94a51479a000e3bce967196" as Address,
+      },
+    }),
+    []
+  );
+
   const formatTime = React.useCallback((d: Date) => {
     // Deterministic 24h clock + date: HH:MM:SS DD-MMM-YY
     const pad2 = (n: number) => n.toString().padStart(2, "0");
@@ -268,11 +297,38 @@ export default function Terminal() {
         return;
       }
       if (sub === "list") {
-        pushNode(
-          <span className="text-gray-700">
-            Common tokens: ETH, ARB, USDC, LINK, USDS, UNI, AAVE, PEPE
-          </span>
-        );
+        const list = COMMON_TOKENS[selectedChainId];
+        if (!list || Object.keys(list).length === 0) {
+          pushNode(<span className="text-gray-700">No common tokens for this network.</span>);
+          return;
+        }
+        (async () => {
+          const pub = publicClient as unknown as PublicClient;
+          const entries = Object.entries(list);
+          const metas = await Promise.all(
+            entries.map(async ([sym, addr]) => {
+              try {
+                const { decimals } = await getErc20Meta(pub, addr);
+                return { sym: sym.toUpperCase(), addr, decimals };
+              } catch {
+                return { sym: sym.toUpperCase(), addr, decimals: undefined };
+              }
+            })
+          );
+          pushNode(
+            <div className="text-xs">
+              <div className="text-gray-700 mb-1">Common tokens ({selectedChainId === arbitrum.id ? 'Arbitrum' : selectedChainId === mainnet.id ? 'Mainnet' : selectedChainId})</div>
+              <ul className="border border-black divide-y divide-gray-300">
+                {metas.map((m) => (
+                  <li key={m.sym} className="px-2 py-1 flex items-center justify-between">
+                    <span className="font-semibold">{m.sym}{m.decimals !== undefined ? <span className="text-gray-600"> ({m.decimals}d)</span> : null}</span>
+                    <span className="font-mono text-[10px]">{m.addr}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        })();
         return;
       }
       if (sub === "active") {
@@ -297,16 +353,19 @@ export default function Terminal() {
         );
         return;
       }
-      if (!isAddress(sub)) {
-        pushNode(
-          <span className="text-red-600">
-            Unknown token symbol. Use /token list or provide an ERC-20 0x
-            address.
-          </span>
-        );
+      // Map symbol to address for the current network
+      let candidate: string | undefined = undefined;
+      const list = COMMON_TOKENS[selectedChainId];
+      if (list) {
+        const addrMap = list[sub as keyof typeof list];
+        if (addrMap) candidate = addrMap as string;
+      }
+      if (!candidate) candidate = sub; // Could be a raw address
+      if (!isAddress(candidate)) {
+        pushNode(<span className="text-red-600">Unknown token. Use /token list or provide an ERC-20 0x address.</span>);
         return;
       }
-      const addr = (sub as string).toLowerCase() as Address;
+      const addr = candidate.toLowerCase() as Address;
       (async () => {
         try {
           const c = publicClient as unknown as PublicClient;

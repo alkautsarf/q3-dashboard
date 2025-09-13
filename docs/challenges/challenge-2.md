@@ -304,3 +304,11 @@ Each state defines what input is valid and which transitions are possible.
   - Move tx monitoring out of `Terminal.tsx` into `TxStatus` using wagmi `useWaitForTransactionReceipt`.
   - Add explorer links per network: Etherscan (mainnet) and Arbiscan (Arbitrum) for both approval and batch txs.
   - Remove inline "BatchSent success" / "Transaction failed" text logs; `TxStatus` displays live status and link instead.
+
+- 2025-09-12 (later)
+  — feat(challenge2): Mainnet support + real /token list
+  - Network switching accepts names or IDs: `/network arbitrum|42161`, `/network mainnet|1`.
+  - `/token list` now displays network-specific common tokens with resolved on-chain decimals:
+    - Mainnet: USDT, USDC, PEPE, BNB, LINK, UNI, WETH, SHIB, STETH, USDS, AAVE.
+    - Arbitrum: ARB, USDC, PEPE, LINK, UNI, USDS, AAVE.
+  - `/token <symbol>` maps to these lists based on the active network; `/token 0x…` still accepts custom ERC-20 addresses.
