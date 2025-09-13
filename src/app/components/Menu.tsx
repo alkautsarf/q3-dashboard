@@ -536,6 +536,8 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
 .sm-scope .sm-panel-item:hover { color: var(--sm-accent, #ff0000); }
 .sm-scope .sm-panel-list[data-numbering] { counter-reset: smItem; }
 .sm-scope .sm-panel-list[data-numbering] .sm-panel-item::after { counter-increment: smItem; content: counter(smItem, decimal-leading-zero); position: absolute; top: 0.1em; right: 3.2em; font-size: 18px; font-weight: 400; color: var(--sm-accent, #ff0000); letter-spacing: 0; pointer-events: none; user-select: none; opacity: var(--sm-num-opacity, 0); }
+/* Do not number the first item (e.g., Home) and do not increment the counter for it */
+.sm-scope .sm-panel-list[data-numbering] .sm-panel-itemWrap:first-child .sm-panel-item::after { content: none !important; counter-increment: none !important; }
 @media (max-width: 1024px) {
   .sm-scope .staggered-menu-panel { width: 100%; left: 0; right: 0; }
   /* When menu is open on mobile/tablet, hide header logo entirely to avoid overlay clash */

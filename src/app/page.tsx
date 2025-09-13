@@ -7,10 +7,11 @@ import ChallengesGrid from "@/app/components/ChallengesGrid";
 import Footer from "@/app/components/Footer";
 
 const menuItems = [
-  { label: "Challenge", ariaLabel: "Go to home page", link: "/challenge1" },
-  { label: "Challenge", ariaLabel: "Learn about us", link: "/challenge2" },
-  { label: "Challenge", ariaLabel: "View our services", link: "/challenge3" },
-  { label: "Challenge", ariaLabel: "Get in touch", link: "/challenge4" },
+  { label: "Home", ariaLabel: "Go to home page", link: "/" },
+  { label: "Challenge", ariaLabel: "Challenge 1", link: "/challenge1" },
+  { label: "Challenge", ariaLabel: "Challenge 2", link: "/challenge2" },
+  { label: "Challenge", ariaLabel: "Challenge 3", link: "/challenge3" },
+  { label: "Challenge", ariaLabel: "Challenge 4", link: "/challenge4" },
 ];
 
 const socialItems = [

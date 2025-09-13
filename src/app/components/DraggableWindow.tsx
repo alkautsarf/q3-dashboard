@@ -46,7 +46,7 @@ export default function DraggableWindow({ width = 820, height = 560, children }:
 
   return (
     <div
-      className="absolute"
+      className="absolute z-50"
       style={{ left: pos?.x ?? 0, top: pos?.y ?? 0, width }}
       onMouseDown={(e) => {
         const target = e.target as HTMLElement;
