@@ -2,7 +2,7 @@ export default function Footer() {
   return (
     <footer className="relative z-10 max-w-5xl mx-auto px-6 pb-10 text-sm text-gray-500">
       <div className="flex items-center justify-between">
-        <span>© {new Date().getFullYear()} Quantum3Labs</span>
+        <span>© {new Date().getFullYear()} elpabl0.eth</span>
         <div className="flex items-center gap-4">
           <a
             className="hover:text-[#A59682]"

@@ -1,6 +1,7 @@
 'use client'
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { usePathname } from 'next/navigation';
 
 export interface StaggeredMenuItem {
   label: string;
@@ -44,6 +45,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
   onMenuOpen,
   onMenuClose
 }: StaggeredMenuProps) => {
+  const pathName = usePathname()
   const [open, setOpen] = useState(false);
   const openRef = useRef(false);
 
@@ -449,6 +451,9 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
                   <li className="sm-panel-itemWrap relative overflow-hidden leading-none" key={it.label + idx}>
                     <a
                       className="sm-panel-item relative text-white font-semibold text-[4rem] cursor-pointer leading-none tracking-[-2px] uppercase transition-[background,color] duration-150 ease-linear inline-block no-underline pr-[1.4em]"
+                      onClick={(e) => {
+                        pathName == it.link ? e.preventDefault() : ""
+                      }}
                       href={it.link}
                       aria-label={it.ariaLabel}
                       data-index={idx + 1}
