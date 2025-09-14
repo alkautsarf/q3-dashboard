@@ -459,10 +459,10 @@ export default function Terminal() {
             );
             return;
           }
-          const total = vals.reduce((a, b) => a + b, 0n);
+          const total = vals.reduce((a, b) => a + b, BigInt(0));
           setTotalDisplay(formatUnits(total, decimals));
           // Balances
-          let bal = 0n;
+          let bal = BigInt(0);
           if (!tokenAddress) {
             bal = await pub.getBalance({ address });
           } else {
@@ -599,7 +599,7 @@ export default function Terminal() {
                           )}, need {formatUnits(total, decimals)}
                         </span>
                       );
-                      setTxStatus("fail");
+                      // setTxStatus was removed in favor of TxStatus component rendering
                       return;
                     }
                     const allowance = await checkAllowance(pubClient, {

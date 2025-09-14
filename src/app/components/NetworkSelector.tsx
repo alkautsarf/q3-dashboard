@@ -48,7 +48,9 @@ export function NetworkSelector({ value, onChange }: NetworkSelectorProps) {
       {options.map((opt, idx) => (
         <li
           key={opt}
-          ref={(el) => (tabRefs.current[idx] = el)}
+          ref={(el) => {
+            tabRefs.current[idx] = el;
+          }}
           onMouseEnter={() => moveToIndex(idx, true)}
           onClick={() => {
             moveToIndex(idx, true);
