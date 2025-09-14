@@ -110,7 +110,7 @@ export async function fetchNativeToken(
 ): Promise<PortfolioToken> {
   try {
     const wei = await alchemy.core.getBalance(address);
-    const balanceStr = formatUnits(wei.toString(), 18);
+    const balanceStr = formatUnits(BigInt(wei.toString()), 18);
     const balanceNum = Number(balanceStr);
     // Symbol/name are ETH across mainnet, base, and arbitrum
     return {
@@ -252,8 +252,9 @@ function viemChainFor(net: SupportedNetwork) {
 
 // Cache a viem public client per network to avoid transport re-initialization overhead
 // via viem docs: https://viem.sh/docs/clients/public
-const _publicClientByNet: Partial<Record<SupportedNetwork, ReturnType<typeof createPublicClient>>> = {};
-function getPublicClient(net: SupportedNetwork) {
+// Use a loose type to avoid versioned generic mismatches between viem types
+const _publicClientByNet: Partial<Record<SupportedNetwork, any>> = {};
+function getPublicClient(net: SupportedNetwork): any {
   const cached = _publicClientByNet[net];
   if (cached) return cached;
   const rpcUrl = getAlchemyRpcUrl(net);
@@ -437,7 +438,7 @@ export async function fetchSmartContractBalances(
 
       for (let i = 0; i < batch.length; i++) {
         const meta = batch[i];
-        const raw = balances[i] ?? 0n;
+        const raw = balances[i] ?? BigInt(0);
         const dec = typeof meta.decimals === "number" ? meta.decimals : 18;
         const balanceStr = formatUnits(raw, dec);
         const balance = Number(balanceStr);

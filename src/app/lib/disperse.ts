@@ -99,7 +99,7 @@ export async function estimateIndivNative(
   client: PublicClient,
   args: { from: Address; recipients: Address[]; values: bigint[] }
 ): Promise<bigint> {
-  let total = 0n;
+  let total = BigInt(0);
   for (let i = 0; i < args.recipients.length; i++) {
     const g = await client.estimateGas({ to: args.recipients[i], account: args.from, value: args.values[i] });
     total += g;
@@ -111,7 +111,7 @@ export async function estimateIndivErc20(
   client: PublicClient,
   args: { from: Address; token: Address; recipients: Address[]; values: bigint[] }
 ): Promise<bigint> {
-  let total = 0n;
+  let total = BigInt(0);
   for (let i = 0; i < args.recipients.length; i++) {
     const g = await client.estimateContractGas({
       address: args.token,
@@ -191,4 +191,3 @@ export async function getErc20Meta(
 export function toUnits(amount: string, decimals: number): bigint {
   return parseUnits(amount, decimals);
 }
-

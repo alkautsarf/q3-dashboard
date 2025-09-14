@@ -21,7 +21,11 @@ import NetworkSelector, {
   type NetworkKey,
 } from "@/app/components/NetworkSelector";
 import { getAlchemyClient } from "@/app/lib/alchemy";
-import { useQuery, useQueryClient } from "@tanstack/react-query"; // via TanStack Query docs
+import {
+  useQuery,
+  useQueryClient,
+  keepPreviousData,
+} from "@tanstack/react-query"; // via TanStack Query v5: https://tanstack.com/query/latest/docs/framework/react/guides/migrating-to-v5#removal-of-keeppreviousdata
 import { filterPortfolioTokens } from "@/app/lib/portfolio";
 import { resolveEnsAddress, resolveEnsName } from "@/app/lib/ens";
 import {
@@ -149,7 +153,7 @@ function Approach1({
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchErc20Prices(net, contracts),
   });
 
@@ -159,8 +163,7 @@ function Approach1({
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
-    placeholderData: () => queryClient.getQueryData(["price-native"]) as any,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchNativeEthPrice(),
   });
 
@@ -182,7 +185,7 @@ function Approach1({
     staleTime: 60 * 60_000,
     gcTime: 60 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchTokenLogos(net, missingLogos),
   });
 
@@ -415,9 +418,7 @@ function Approach2({
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
-    placeholderData: () =>
-      queryClient.getQueryData(["prices-erc20", net, contractsKey]) as any,
+    placeholderData: keepPreviousData,
     queryFn: async () => {
       return fetchErc20Prices(net, contracts);
     },
@@ -432,8 +433,7 @@ function Approach2({
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
-    placeholderData: () => queryClient.getQueryData(["price-native"]) as any,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchNativeEthPrice(),
   });
 
@@ -455,7 +455,7 @@ function Approach2({
     staleTime: 60 * 60_000,
     gcTime: 60 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchTokenLogos(net, missingLogos),
   });
 
@@ -697,9 +697,7 @@ function Approach3({
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
-    placeholderData: () =>
-      queryClient.getQueryData(["prices-erc20", net, contractsKey]) as any,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchErc20Prices(net, contracts),
   });
 
@@ -709,8 +707,7 @@ function Approach3({
     staleTime: 5 * 60_000,
     gcTime: 15 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
-    placeholderData: () => queryClient.getQueryData(["price-native"]) as any,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchNativeEthPrice(),
   });
 
@@ -730,7 +727,7 @@ function Approach3({
     staleTime: 60 * 60_000,
     gcTime: 60 * 60_000,
     refetchOnWindowFocus: false,
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
     queryFn: async () => fetchTokenLogos(net, missingLogos),
   });
 
