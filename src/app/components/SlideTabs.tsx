@@ -23,12 +23,14 @@ export const SlideTabs: React.FC<SlideTabsProps> = ({ tabs, onTabClick, defaultI
   });
   const [active, setActive] = useState<number>(Math.min(Math.max(defaultIndex, 0), Math.max(tabs.length - 1, 0)));
   const tabRefs = useRef<(HTMLLIElement | null)[]>([]);
+  const containerRef = useRef<HTMLUListElement | null>(null);
 
   const moveToIndex = (idx: number, show = true) => {
     const el = tabRefs.current[idx];
     if (!el) return;
     const { width, height } = el.getBoundingClientRect();
-    setPosition({ left: el.offsetLeft, width, height, opacity: show ? 1 : 0 });
+    const scrollLeft = containerRef.current?.scrollLeft ?? 0;
+    setPosition({ left: el.offsetLeft - scrollLeft, width, height, opacity: show ? 1 : 0 });
   };
 
   // Initialize cursor to active tab and keep it in sync on resize
@@ -36,13 +38,20 @@ export const SlideTabs: React.FC<SlideTabsProps> = ({ tabs, onTabClick, defaultI
     moveToIndex(active, true);
     const onResize = () => moveToIndex(active, true);
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    const el = containerRef.current;
+    const onScroll = () => moveToIndex(active, true);
+    el?.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("resize", onResize);
+      el?.removeEventListener("scroll", onScroll as any);
+    };
   }, [active, tabs.length]);
 
   return (
     <ul
+      ref={containerRef}
       onMouseLeave={() => moveToIndex(active, true)}
-      className="relative mx-auto flex w-fit rounded-full border-2 border-black bg-white p-1"
+      className="relative mx-auto flex w-auto max-w-full overflow-x-auto no-scrollbar flex-nowrap rounded-full border-2 border-black bg-white p-1"
     >
       {tabs.map((tabLabel, idx) => (
         <Tab
@@ -55,6 +64,7 @@ export const SlideTabs: React.FC<SlideTabsProps> = ({ tabs, onTabClick, defaultI
           }}
           index={idx}
           provideRef={(el) => (tabRefs.current[idx] = el)}
+          getScrollLeft={() => containerRef.current?.scrollLeft ?? 0}
         >
           {tabLabel}
         </Tab>
@@ -70,9 +80,10 @@ interface TabProps {
   onClick?: () => void;
   index: number;
   provideRef?: (el: HTMLLIElement | null) => void;
+  getScrollLeft: () => number;
 }
 
-const Tab: React.FC<TabProps> = ({ children, setPosition, onClick, provideRef }) => {
+const Tab: React.FC<TabProps> = ({ children, setPosition, onClick, provideRef, getScrollLeft }) => {
   const ref = useRef<HTMLLIElement>(null);
 
   useEffect(() => {
@@ -86,16 +97,17 @@ const Tab: React.FC<TabProps> = ({ children, setPosition, onClick, provideRef })
         if (!ref.current) return;
 
         const { width, height } = ref.current.getBoundingClientRect();
+        const scrollLeft = getScrollLeft();
 
         setPosition({
-          left: ref.current.offsetLeft,
+          left: ref.current.offsetLeft - scrollLeft,
           width,
           height,
           opacity: 1,
         });
       }}
       onClick={onClick}
-      className="relative z-10 block cursor-pointer px-4 py-2 text-sm uppercase text-white mix-blend-difference"
+      className="relative z-10 block cursor-pointer px-3 sm:px-4 py-2 text-xs sm:text-sm uppercase text-white mix-blend-difference whitespace-nowrap"
     >
       {children}
     </li>

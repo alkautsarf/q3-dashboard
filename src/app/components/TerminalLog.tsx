@@ -42,6 +42,7 @@ export default function TerminalLog({
         <li className="px-4 py-2 text-black">
           <div className="font-mono tracking-wide">=== disperse ===</div>
           <div className="text-sm">
+            Challenge 2 - Multi-Send Tool <br/> 
             Batch-send ETH or ERC-20 to multiple recipients in a single, safe
             transaction.
           </div>

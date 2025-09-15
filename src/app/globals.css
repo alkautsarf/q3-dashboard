@@ -60,3 +60,118 @@ body {
   pointer-events: none;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.30), inset 0 0 32px rgba(255,255,255,0.05);
 }
+
+.glitch {
+  color: #000;
+  position:relative
+}
+
+.glitch:before, .glitch:after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color:#ffff
+}
+
+.glitch:before {
+  left: 2px;
+  text-shadow: -1px 0 #FF5093;
+  clip: rect(24px, 550px, 90px, 0);
+  animation:noise-anim 3s infinite linear alternate
+}
+
+.glitch:after {
+  left: -2px;
+  text-shadow: 1px 0 #00F7FF;
+  clip: rect(85px, 550px, 140px, 0);
+  animation:noise-anim 2.5s infinite linear alternate
+}
+
+@keyframes noise-anim {
+  0% {
+      clip:rect(67px, 9999px, 122px, 0)
+  }
+
+  5% {
+      clip:rect(102px, 9999px, 40px, 0)
+  }
+
+  10% {
+      clip:rect(104px, 9999px, 119px, 0)
+  }
+
+  15% {
+      clip:rect(7px, 9999px, 89px, 0)
+  }
+
+  20% {
+      clip:rect(6px, 9999px, 117px, 0)
+  }
+
+  25% {
+      clip:rect(58px, 9999px, 44px, 0)
+  }
+
+  30% {
+      clip:rect(8px, 9999px, 108px, 0)
+  }
+
+  35% {
+      clip:rect(139px, 9999px, 25px, 0)
+  }
+
+  40% {
+      clip:rect(131px, 9999px, 65px, 0)
+  }
+
+  45% {
+      clip:rect(144px, 9999px, 85px, 0)
+  }
+
+  50% {
+      clip:rect(83px, 9999px, 36px, 0)
+  }
+
+  55% {
+      clip:rect(98px, 9999px, 117px, 0)
+  }
+
+  60% {
+      clip:rect(45px, 9999px, 67px, 0)
+  }
+
+  65% {
+      clip:rect(117px, 9999px, 5px, 0)
+  }
+
+  70% {
+      clip:rect(72px, 9999px, 26px, 0)
+  }
+
+  75% {
+      clip:rect(130px, 9999px, 54px, 0)
+  }
+
+  80% {
+      clip:rect(1px, 9999px, 52px, 0)
+  }
+
+  85% {
+      clip:rect(85px, 9999px, 29px, 0)
+  }
+
+  90% {
+      clip:rect(51px, 9999px, 53px, 0)
+  }
+
+  95% {
+      clip:rect(65px, 9999px, 52px, 0)
+  }
+
+  to {
+      clip:rect(17px, 9999px, 17px, 0)
+  }
+}
