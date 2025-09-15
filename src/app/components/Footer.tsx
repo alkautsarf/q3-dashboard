@@ -12,9 +12,6 @@ export default function Footer() {
           >
             GitHub
           </a>
-          <a className="hover:text-[#A59682]" href="https://twitter.com" target="_blank" rel="noopener noreferrer">
-            Twitter
-          </a>
         </div>
       </div>
     </footer>

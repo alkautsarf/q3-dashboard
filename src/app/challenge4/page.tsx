@@ -1,6 +1,8 @@
 "use client";
 
 import React from "react";
+import { useAccount, useEnsName } from "wagmi";
+import { mainnet } from "wagmi/chains";
 import Background from "@/app/components/Background";
 import StaggeredMenu from "@/app/components/Menu";
 import ConnectButtonCustom from "@/app/components/ConnectButton";
@@ -22,6 +24,13 @@ const socialItems = [
 ];
 
 export default function Challenge4Page() {
+  const { address, isConnected } = useAccount();
+  const { data: ens } = useEnsName({ address, chainId: mainnet.id });
+  const connectedLabel = React.useMemo(() => {
+    if (!address) return null;
+    if (ens) return ens;
+    return `${address.slice(0, 6)}…${address.slice(-4)}`;
+  }, [address, ens]);
   return (
     <div className="relative min-h-screen bg-white text-black font-body">
       {/* Overlay Menu */}
@@ -58,28 +67,25 @@ export default function Challenge4Page() {
       </div>
 
       <main className="relative z-10 p-6 pt-20 md:pt-6">
-  {/* Header */}
-  <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
-    <div>
-      <h1 className="text-2xl font-semibold tracking-tight">
-        Challenge 4 — Greeting Wall
-      </h1>
-      <p className="text-sm text-gray-600 mt-1">
-        Free/ETH greetings on Arbitrum. ERC-20 via permit coming soon.
-      </p>
-    </div>
-    <div className="shrink-0 flex items-center">
-      <ConnectButtonCustom />
-    </div>
-  </div>
+        {/* Header */}
+        <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              Challenge 4 — Greeting Wall
+            </h1>
+            <p className="text-sm text-gray-600 mt-1">Support greetings with ETH, ERC-20 (via EIP-2612 or Permit2), or free (non-premium).</p>
+          </div>
+          <div className="shrink-0 flex items-center">
+            <ConnectButtonCustom />
+          </div>
+        </div>
 
-  {/* Content */}
-  <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-    <GreetingForm />
-    <GreetingHistory />
-  </div>
-</main>
+        {/* Content */}
+        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+          <GreetingForm />
+          <GreetingHistory />
+        </div>
+      </main>
     </div>
   );
 }
-

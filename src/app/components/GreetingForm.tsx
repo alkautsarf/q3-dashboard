@@ -9,8 +9,9 @@ import {
   useSwitchChain,
   useWriteContract,
   useSignTypedData,
+  useEnsName,
 } from "wagmi"; // via wagmi docs: https://wagmi.sh/react
-import { arbitrum } from "wagmi/chains";
+import { arbitrum, mainnet } from "wagmi/chains";
 import {
   formatEther,
   parseEther,
@@ -19,13 +20,7 @@ import {
   toHex,
   encodeAbiParameters,
 } from "viem";
-import {
-  ARBITRUM_CHAIN_ID,
-  GREETING_ADDRESS,
-  greetingAbi,
-  erc20Abi,
-  PERMIT2_ADDRESS,
-} from "@/app/lib/greeting";
+import { GREETING_ADDRESS, greetingAbi, erc20Abi, PERMIT2_ADDRESS } from "@/app/lib/greeting";
 import TxStatus from "@/app/components/TxStatus";
 import TokenSelector from "@/app/components/TokenSelector";
 import NetworkSelector, {
@@ -37,9 +32,10 @@ type Payment = "free" | "eth" | "erc20";
 export default function GreetingForm() {
   const { isConnected, address: ownerAddress } = useAccount();
   const chainId = useChainId();
+  const { data: ens } = useEnsName({ address: ownerAddress, chainId: mainnet.id });
   const { switchChain } = useSwitchChain();
   const { writeContractAsync } = useWriteContract(); // via wagmi docs
-  const pub = usePublicClient({ chainId: ARBITRUM_CHAIN_ID });
+  const pub = usePublicClient({ chainId });
   const { signTypedDataAsync } = useSignTypedData();
 
   const [text, setText] = useState("");
@@ -55,7 +51,9 @@ export default function GreetingForm() {
   const [symbol, setSymbol] = useState<string | null>(null);
   const [allowanceOk, setAllowanceOk] = useState<boolean>(false);
   const [approvalTx, setApprovalTx] = useState<`0x${string}` | null>(null);
+  const [approvalChain, setApprovalChain] = useState<number | null>(null);
   const [allowanceIsMax, setAllowanceIsMax] = useState<boolean>(false);
+  const [txChain, setTxChain] = useState<number | null>(null);
   const MAX_UINT256 = (1n << 256n) - 1n;
   const STD_PERMIT_TYPEHASH = React.useMemo(
     () =>
@@ -117,13 +115,7 @@ export default function GreetingForm() {
       setError("Connect your wallet first.");
       return;
     }
-    if (chainId !== ARBITRUM_CHAIN_ID) {
-      try {
-        switchChain?.({ chainId: arbitrum.id });
-      } catch {}
-      setError("Please switch to Arbitrum.");
-      return;
-    }
+    // No forced chain — supports Arbitrum & Mainnet
     if (!text || text.trim().length === 0) {
       setError("Enter a greeting first.");
       return;
@@ -137,10 +129,11 @@ export default function GreetingForm() {
           address: GREETING_ADDRESS,
           functionName: "setGreetingETH",
           args: [text],
-          chainId: arbitrum.id,
+          chainId,
           value,
         }); // via wagmi docs: useWriteContract
         setTx(hash);
+        setTxChain(chainId);
       } else {
         // ERC-20 handled by explicit buttons below
         return;
@@ -299,16 +292,17 @@ export default function GreetingForm() {
   return (
     <GlassCard title="Greeting Form" className="w-full">
       <div className="space-y-4">
-        {/* Network selector (reuse component; arbitrum-only behavior) */}
+        {/* Connected identity (ENS preferred) */}
+        {isConnected && ownerAddress && (
+          <div className="text-sm ">Connected as <span className="font-mono">{ens || `${ownerAddress.slice(0,6)}…${ownerAddress.slice(-4)}`}</span></div>
+        )}
+
+        {/* Network selector */}
         <div className="flex items-center gap-3">
           <div className="text-sm ">Network</div>
           <div className="ml-auto">
             <NetworkSelector
-              value={
-                chainId === ARBITRUM_CHAIN_ID
-                  ? ("arbitrum" as NetworkKey)
-                  : ("mainnet" as NetworkKey)
-              }
+              value={chainId === 42161 ? ("arbitrum" as NetworkKey) : ("mainnet" as NetworkKey)}
               onChange={(next) => {
                 if (next === "arbitrum")
                   switchChain?.({ chainId: arbitrum.id });
@@ -381,7 +375,7 @@ export default function GreetingForm() {
         {/* ERC-20 input group */}
         {payment === "erc20" && (
           <div className="space-y-3">
-            <TokenSelector value={tokenAddr} onChange={setTokenAddr} />
+            <TokenSelector value={tokenAddr} onChange={setTokenAddr} chainId={chainId} />
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -414,7 +408,7 @@ export default function GreetingForm() {
                       const domain = {
                         name: eip2612Domain?.name || "",
                         version: eip2612Domain?.version || "1",
-                        chainId: arbitrum.id,
+                        chainId,
                         verifyingContract: tokenAddr as `0x${string}`,
                       } as const;
                       const types = {
@@ -477,17 +471,14 @@ export default function GreetingForm() {
                             chainId: arbitrum.id,
                           });
                           setApprovalTx(approveHash);
+                          setApprovalChain(chainId);
                           await pub.waitForTransactionReceipt({
                             hash: approveHash,
                           });
                         }
                       } catch {}
                       const nonceP2 = randomNonce256();
-                      const domain = {
-                        name: "Permit2",
-                        chainId: arbitrum.id,
-                        verifyingContract: PERMIT2_ADDRESS,
-                      } as const;
+                      const domain = { name: "Permit2", chainId, verifyingContract: PERMIT2_ADDRESS } as const;
                       const types = {
                         TokenPermissions: [
                           { name: "token", type: "address" },
@@ -531,9 +522,10 @@ export default function GreetingForm() {
                           signature as `0x${string}`,
                           text,
                         ],
-                        chainId: arbitrum.id,
+                            chainId,
                       });
                       setTx(hash);
+                      setTxChain(chainId);
                     }
                   } catch (e: any) {
                     setError(String(e?.shortMessage || e?.message || e));
@@ -547,13 +539,9 @@ export default function GreetingForm() {
                 Sign Permit & Set Greeting
               </button>
             </div>
-            {approvalTx && (
+            {approvalTx && approvalChain === chainId && (
               <div className="pt-2">
-                <TxStatus
-                  label="Approve Permit2"
-                  txHash={approvalTx}
-                  chainId={arbitrum.id}
-                />
+                <TxStatus label="Approve Permit2" txHash={approvalTx} chainId={chainId} />
               </div>
             )}
           </div>
@@ -575,13 +563,9 @@ export default function GreetingForm() {
           </button>
         )}
 
-        {tx && (
+        {tx && txChain === chainId && (
           <div className="pt-4">
-            <TxStatus
-              label={payment === "eth" ? "Greeting (ETH)" : "Greeting"}
-              txHash={tx}
-              chainId={arbitrum.id}
-            />
+            <TxStatus label={payment === "eth" ? "Greeting (ETH)" : "Greeting"} txHash={tx} chainId={chainId} />
           </div>
         )}
       </div>

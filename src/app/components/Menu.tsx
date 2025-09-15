@@ -2,6 +2,7 @@
 import React, { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { usePathname } from 'next/navigation';
+import Link from "next/link";
 
 export interface StaggeredMenuItem {
   label: string;
@@ -380,6 +381,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
           aria-label="Main navigation header"
         >
           <div className="sm-logo flex items-center h-full select-none pointer-events-auto group-data-[open]:hidden md:flex" aria-label="Logo">
+            <Link href="./">
             <img
               src={logoUrl || '/src/assets/logos/reactbits-gh-white.svg'}
               alt="Logo"
@@ -389,6 +391,7 @@ export const StaggeredMenu: React.FC<StaggeredMenuProps> = ({
               height={96}
               style={{ height: '96px' }}
             />
+            </Link>
           </div>
 
           <div className="flex items-center h-full pointer-events-auto">

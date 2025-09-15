@@ -87,6 +87,11 @@ export type GreetingLog = {
   transactionHash?: `0x${string}`;
 };
 
+export function greetingAddressForChain(_chainId: number): Address {
+  // Address is identical across chains via CREATE2; return single constant.
+  return GREETING_ADDRESS;
+}
+
 // Minimal ERC20 ABI (name, symbol, decimals, allowance, approve, nonces)
 export const erc20Abi = [
   { type: "function", stateMutability: "view", name: "name", inputs: [], outputs: [{ type: "string" }] },

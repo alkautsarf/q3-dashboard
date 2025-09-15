@@ -14,12 +14,12 @@ export default function Hero() {
           Start Challenge 1
         </Link>
         <a
-          href="https://github.com/alkautsarf/q3-dashboard"
+          href="https://github.com/alkautsarf/q3-dashboard/blob/main/README.md"
           target="_blank"
           rel="noopener noreferrer"
           className="px-5 py-2.5 rounded-full border border-gray-300 text-black hover:bg-gray-50 transition"
         >
-          View Repo
+          View Docs
         </a>
       </div>
       <div className="mt-8 h-px" style={{ background: "#A59682" }} />
