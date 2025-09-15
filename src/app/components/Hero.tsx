@@ -3,8 +3,8 @@ import Link from "next/link";
 export default function Hero() {
   return (
     <section className="relative z-10 max-w-4xl mx-auto pt-28 px-6 text-center">
-      <h1 className="text-black tracking-tight font-semibold text-4xl sm:text-6xl">
-        Monochrome. Futuristic. Minimal.
+      <h1 className="glitch text-black tracking-tight font-semibold text-4xl sm:text-6xl " data-text="Build Beyond Limits.">
+        Build Beyond Limits.
       </h1>
       <p className="mt-4 text-gray-600">
         Explore challenges, benchmark approaches, and keep the UI razor‑clean.
