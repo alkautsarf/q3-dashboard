@@ -25,6 +25,7 @@ export default function Page() {
       <div className="fixed inset-0 z-40 pointer-events-none">
         <StaggeredMenu
           position="right"
+          className="z-10 md:z-40"
           items={menuItems}
           socialItems={socialItems}
           displaySocials={true}
@@ -51,9 +52,19 @@ export default function Page() {
           disableRotation={false}
         />
       </div>
-      <DraggableWindow width={960} height={620}>
-        <Terminal />
-      </DraggableWindow>
+      {/* Mobile: full-screen terminal with top padding for the header (96px) */}
+      <div className="md:hidden fixed inset-0 z-10 pt-24 px-2">
+        <div className="h-[calc(100vh-96px)] w-full">
+          <Terminal />
+        </div>
+      </div>
+
+      {/* Desktop: draggable window */}
+      <div className="hidden md:block">
+        <DraggableWindow width={960} height={620}>
+          <Terminal />
+        </DraggableWindow>
+      </div>
     </div>
   );
 }

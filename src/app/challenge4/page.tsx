@@ -57,24 +57,28 @@ export default function Challenge4Page() {
         />
       </div>
 
-      <main className="relative z-10 p-6">
-        {/* Header */}
-        <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Challenge 4 — Greeting Wall</h1>
-            <p className="text-sm text-gray-600 mt-1">Free/ETH greetings on Arbitrum. ERC‑20 via permit coming soon.</p>
-          </div>
-          <div className="shrink-0 flex items-center">
-            <ConnectButtonCustom />
-          </div>
-        </div>
+      <main className="relative z-10 p-6 pt-20 md:pt-6">
+  {/* Header */}
+  <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
+    <div>
+      <h1 className="text-2xl font-semibold tracking-tight">
+        Challenge 4 — Greeting Wall
+      </h1>
+      <p className="text-sm text-gray-600 mt-1">
+        Free/ETH greetings on Arbitrum. ERC-20 via permit coming soon.
+      </p>
+    </div>
+    <div className="shrink-0 flex items-center">
+      <ConnectButtonCustom />
+    </div>
+  </div>
 
-        {/* Content */}
-        <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
-          <GreetingForm />
-          <GreetingHistory />
-        </div>
-      </main>
+  {/* Content */}
+  <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
+    <GreetingForm />
+    <GreetingHistory />
+  </div>
+</main>
     </div>
   );
 }

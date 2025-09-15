@@ -935,10 +935,11 @@ export default function Challenge1Page() {
 
   return (
     <div className="relative min-h-screen bg-white text-black font-body">
-      {/* Overlay Staggered Menu */}
+      {/* Overlay Staggered Menu (ensure visible on mobile, avoid overlaying content interactions) */}
       <div className="fixed inset-0 z-40 pointer-events-none">
         <StaggeredMenu
           position="right"
+          className="z-10 md:z-40"
           items={menuItems}
           socialItems={socialItems}
           displaySocials={true}
@@ -968,7 +969,8 @@ export default function Challenge1Page() {
         />
       </div>
 
-      <main className="relative z-10 p-6">
+      {/* Add extra top padding on mobile to account for fixed header */}
+      <main className="relative z-10 px-6 pt-24 md:pt-6">
         {/* Header + Connect */}
         <div className="max-w-6xl mx-auto mb-6 flex items-center justify-between gap-4">
           <div>
@@ -1036,8 +1038,9 @@ export default function Challenge1Page() {
             </form>
 
             {/* Network + Filter + Tabs */}
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 text-sm text-black rounded-full  px-3 py-1">
+            {/* Desktop/tablet row */}
+            <div className="hidden md:flex items-center gap-4">
+              <label className="flex items-center gap-2 text-sm text-black rounded-full px-3 py-1">
                 <input
                   type="checkbox"
                   className="accent-black cursor-pointer"
@@ -1052,6 +1055,27 @@ export default function Challenge1Page() {
                 tabs={approaches}
                 onTabClick={(index) => setActive(index)}
               />
+            </div>
+
+            {/* Mobile: push NetworkSelector + Tabs to bottom of controls card */}
+            <div className="md:hidden w-full">
+              <div className="mt-2 flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-black rounded-full px-1 py-1">
+                  <input
+                    type="checkbox"
+                    className="accent-black cursor-pointer"
+                    checked={hideSpam}
+                    onChange={(e) => setHideSpam(e.target.checked)}
+                  />
+                  Hide Spam
+                </label>
+              </div>
+              <div className="mt-3 flex w-full justify-center">
+                <NetworkSelector value={network} onChange={setNetwork} />
+              </div>
+              <div className="mt-3 flex w-full justify-center">
+                <SlideTabs tabs={approaches} onTabClick={(index) => setActive(index)} />
+              </div>
             </div>
           </div>
 

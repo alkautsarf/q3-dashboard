@@ -28,6 +28,9 @@ import {
 } from "@/app/lib/greeting";
 import TxStatus from "@/app/components/TxStatus";
 import TokenSelector from "@/app/components/TokenSelector";
+import NetworkSelector, {
+  type NetworkKey,
+} from "@/app/components/NetworkSelector";
 
 type Payment = "free" | "eth" | "erc20";
 
@@ -296,26 +299,26 @@ export default function GreetingForm() {
   return (
     <GlassCard title="Greeting Form" className="w-full">
       <div className="space-y-4">
-        {/* Network selector (Arbitrum only for now) */}
-        <div className="flex items-center justify-between gap-3">
-          <div className="text-xs text-gray-600">Network</div>
-          <div className="flex items-center gap-2">
-            <span className="px-3 py-1 border-2 border-black rounded-full text-sm bg-white">
-              Arbitrum
-            </span>
-            {chainId !== ARBITRUM_CHAIN_ID && (
-              <button
-                className="px-3 py-1 border-2 border-black rounded-lg bg-black text-white"
-                onClick={() => switchChain?.({ chainId: arbitrum.id })}
-              >
-                Switch
-              </button>
-            )}
+        {/* Network selector (reuse component; arbitrum-only behavior) */}
+        <div className="flex items-center gap-3">
+          <div className="text-sm ">Network</div>
+          <div className="ml-auto">
+            <NetworkSelector
+              value={
+                chainId === ARBITRUM_CHAIN_ID
+                  ? ("arbitrum" as NetworkKey)
+                  : ("mainnet" as NetworkKey)
+              }
+              onChange={(next) => {
+                if (next === "arbitrum")
+                  switchChain?.({ chainId: arbitrum.id });
+                else if (next === "mainnet") switchChain?.({ chainId: 1 });
+              }}
+            />
           </div>
         </div>
         <div className="flex items-center justify-between gap-3">
           <label className="text-sm">Greeting</label>
-          <span className="text-xs text-gray-500">Arbitrum only</span>
         </div>
         <textarea
           rows={4}
@@ -390,7 +393,7 @@ export default function GreetingForm() {
               />
               <span className="text-sm">Amount</span>
             </div>
-            <div className="text-xs text-gray-600">
+            <div className="text-sm text-gray-600">
               Path: {permitPath === "2612" ? "EIP‑2612 Permit" : "Permit2"}
               {decimals != null && symbol ? ` • ${symbol}` : ""}
             </div>
@@ -512,7 +515,7 @@ export default function GreetingForm() {
                         types,
                         primaryType: "PermitTransferFrom",
                         message,
-                      });        
+                      });
                       const hash = await writeContractAsync({
                         abi: greetingAbi,
                         address: GREETING_ADDRESS,
