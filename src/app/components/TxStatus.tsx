@@ -8,13 +8,20 @@ type Props = {
   label?: string; // e.g., "Approval" | "Batch"
   gasBatch?: string;
   gasIndiv?: string;
+  onSettled?: (result: "success" | "error") => void;
 };
 
 // Monitor tx progress and show explorer link.
-export default function TxStatus({ txHash, chainId, label = "Transaction", gasBatch, gasIndiv }: Props) {
+export default function TxStatus({ txHash, chainId, label = "Transaction", gasBatch, gasIndiv, onSettled }: Props) {
   const wait = useWaitForTransactionReceipt({ hash: txHash, chainId });
   const status = wait.status === "success" ? "success" : wait.status === "error" ? "fail" : wait.status === "pending" ? "pending" : "idle";
   const color = status === "success" ? "text-green-600" : status === "fail" ? "text-red-600" : "text-black";
+
+  React.useEffect(() => {
+    if (!onSettled) return;
+    if (wait.status === "success") onSettled("success");
+    else if (wait.status === "error") onSettled("error");
+  }, [wait.status, onSettled]);
 
   const explorerBase = chainId === 1 ? "https://etherscan.io/tx/" : chainId === 42161 ? "https://arbiscan.io/tx/" : undefined;
   const explorerLabel = chainId === 1 ? "Etherscan" : chainId === 42161 ? "Arbiscan" : "Explorer";
