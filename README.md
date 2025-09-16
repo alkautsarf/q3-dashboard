@@ -55,6 +55,7 @@ forge coverage --exclude-tests --nmco script/<CONTRACT_NAME>.s.sol
 - Next.js + React + TypeScript
 - wagmi + viem (wallet/RPC)
 - EIP-2612 & Permit2 (approval-less ERC-20 flows)
+- **Responsive Design:** mobile-friendly layout, but primarily optimized for web.
   
 ## ✅ Status
 - Challenge 1 — **Finalized**
