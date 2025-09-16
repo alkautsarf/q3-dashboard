@@ -18,7 +18,7 @@ const menuItems = [
 ];
 
 const socialItems = [
-  { label: "Twitter", link: "https://twitter.com" },
+  { label: "Twitter", link: "https://x.com/0xelpabl0" },
   { label: "GitHub", link: "https://github.com/alkautsarf/" },
   { label: "LinkedIn", link: "https://linkedin.com/in/alkausar-f" },
 ];
