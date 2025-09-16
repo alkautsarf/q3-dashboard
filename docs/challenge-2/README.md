@@ -145,4 +145,4 @@ src/
 ---
 
 ## 📄 Contract Docs
-See [Disperse.sol docs](../../solidity/challenge-2/README.md) for the contract interface, deployment, and integration details.
+See [Disperse.sol docs](/src/app/solidity/challenge-2/README.md) for the contract interface, deployment, and integration details.
