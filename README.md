@@ -60,6 +60,32 @@ forge coverage --exclude-tests --nmco script/<CONTRACT_NAME>.s.sol
 - Challenge 3 — **Placeholder**
 - Challenge 4 — **Finalized**
 
+---
+
+## ⚠️ Known Issues
+
+### Challenge 1 — Multi-Read Dashboard
+- **Rendering delay is from price fetching, not balance fetching.**  
+  - Wallet balances and token amounts are fetched quickly via batching/multicall.  
+  - However, prices come from the **CoinGecko API**, which adds latency:  
+    1. The frontend collects all unique token addresses.  
+    2. It queries CoinGecko’s API for price data.  
+    3. The UI merges price data with balances before rendering the table.  
+  - This external API call is the bottleneck — especially noticeable when fetching prices for many tokens — so table rendering can take a few seconds even though balance fetching is efficient.
+
+---
+
+### Challenge 2 — Multi-Send Tool
+- **Optimized for multiple recipients, not single transfers.**  
+  - The smart contract and UI are built to support dispersing funds across many recipients efficiently.  
+  - However, in terms of **UX performance and gas efficiency**, batch transfers are only better at scale:  
+    - **ETH transfers:** Batch becomes cheaper at **6 or more** recipients.  
+    - **ERC-20 transfers:** Batch becomes cheaper at **4 or more** recipients.  
+  - For fewer recipients, the batch path incurs higher overhead than sending individually.  
+  - This is expected behavior: batch overhead amortizes as the number of recipients grows.  
+
+---
+
 ## 📄 License
 
 MIT © 2025 alkautsarf/elpabl0.eth
