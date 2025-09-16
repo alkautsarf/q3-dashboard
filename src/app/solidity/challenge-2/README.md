@@ -85,7 +85,7 @@ function disperseToken(address token, address[] calldata recipients, uint256[] c
 ```
 - **Frontend configuration (.env):**
 ```js
-NEXT_PUBLIC_C1_ADDRESS=0x45Eb2dF3c12C8fF7977bAF3f153E92C6a4933e69
+NEXT_PUBLIC_C2_ADDRESS=0x45Eb2dF3c12C8fF7977bAF3f153E92C6a4933e69
 ```
 
 ## 🔗 Integration Notes
