@@ -111,6 +111,7 @@ export default function GreetingForm() {
   const onSubmit = async () => {
     setError(null);
     setTx(null);
+    setTxChain(null);
     if (!isConnected) {
       setError("Connect your wallet first.");
       return;
@@ -396,6 +397,8 @@ export default function GreetingForm() {
                 onClick={async () => {
                   try {
                     setError(null);
+                    setTx(null);
+                    setTxChain(null);
                     if (!pub || !tokenAddr || !ownerAddress || decimals == null)
                       return;
                     const fee = parseUnits(tokenAmount || "0", decimals);
@@ -453,6 +456,7 @@ export default function GreetingForm() {
                         chainId: arbitrum.id,
                       });
                       setTx(hash);
+                      setTxChain(arbitrum.id);
                     } else {
                       // Ensure Permit2 has ERC20 allowance, or grant MAX first
                       try {
@@ -522,7 +526,7 @@ export default function GreetingForm() {
                           signature as `0x${string}`,
                           text,
                         ],
-                            chainId,
+                        chainId,
                       });
                       setTx(hash);
                       setTxChain(chainId);
@@ -541,7 +545,19 @@ export default function GreetingForm() {
             </div>
             {approvalTx && approvalChain === chainId && (
               <div className="pt-2">
-                <TxStatus label="Approve Permit2" txHash={approvalTx} chainId={chainId} />
+                <TxStatus
+                  label="Approve Permit2"
+                  txHash={approvalTx}
+                  chainId={chainId}
+                  onSettled={(status) => {
+                    if (status === "success") {
+                      setTimeout(() => {
+                        setApprovalTx(null);
+                        setApprovalChain(null);
+                      }, 10_000);
+                    }
+                  }}
+                />
               </div>
             )}
           </div>
@@ -563,9 +579,21 @@ export default function GreetingForm() {
           </button>
         )}
 
-        {tx && txChain === chainId && (
+        {tx && txChain && (
           <div className="pt-4">
-            <TxStatus label={payment === "eth" ? "Greeting (ETH)" : "Greeting"} txHash={tx} chainId={chainId} />
+            <TxStatus
+              label={payment === "eth" ? "Greeting (ETH)" : "Greeting"}
+              txHash={tx}
+              chainId={txChain}
+              onSettled={(status) => {
+                if (status === "success") {
+                  setTimeout(() => {
+                    setTx(null);
+                    setTxChain(null);
+                  }, 10_000);
+                }
+              }}
+            />
           </div>
         )}
       </div>

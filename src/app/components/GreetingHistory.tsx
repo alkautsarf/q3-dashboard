@@ -1,11 +1,15 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import GlassCard from "@/app/components/Shared/GlassCard";
 import { usePublicClient, useWatchContractEvent, useChainId, useEnsName } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { greetingAddressForChain, greetingAbi, type GreetingLog, erc20Abi } from "@/app/lib/greeting";
 import { formatEther, formatUnits } from "viem";
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 function shortAddr(a: string) {
   return a ? `${a.slice(0, 6)}…${a.slice(-4)}` : "";
@@ -23,12 +27,32 @@ export default function GreetingHistory() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [tokenMeta, setTokenMeta] = useState<Record<string, { symbol: string; decimals: number }>>({});
+  const cacheRef = useRef<Record<number, GreetingLog[]>>({});
+  const activeChainRef = useRef<number>(chainId);
+  const DEPLOY_BLOCK: Record<number, bigint> = useMemo(
+    () => ({
+      1: 23_370_538n,
+      42161: 379_428_711n,
+    }),
+    []
+  );
+
+  useEffect(() => {
+    activeChainRef.current = chainId;
+  }, [chainId]);
 
   useEffect(() => {
     let mounted = true;
+    const currentChain = chainId;
     (async () => {
       if (!pub) return;
-      setLoading(true);
+      const cached = cacheRef.current[currentChain];
+      if (cached?.length) {
+        setLogs(cached);
+      } else {
+        setLogs([]);
+      }
+      setLoading(!cached?.length);
       setError(null);
       try {
         const latest = await pub.getBlockNumber();
@@ -46,39 +70,77 @@ export default function GreetingHistory() {
           ],
         };
         let items: GreetingLog[] = [];
-        if (chainId === 1) {
-          // Mainnet: start from known deployment block, scan in safe windows
-          const deployStart = 23370639n; // user-specified deployment block
-          const step = 900n; // <= 1k per call (Alchemy limit)
-          const maxItems = 50;
-          let to = latest;
-          let acc: any[] = [];
-          while (to >= deployStart && acc.length < maxItems) {
-            let from = to > step ? to - step + 1n : deployStart;
-            if (from < deployStart) from = deployStart;
-            const chunk = (await pub.getLogs({ address: addr, event: ev, fromBlock: from, toBlock: to } as any)) as any[];
-            acc = [...chunk, ...acc];
-            if (from === deployStart) break;
-            to = from - 1n;
+        const knownStart = DEPLOY_BLOCK[chainId];
+        if (knownStart) {
+          const window = chainId === 1 ? 900n : 20_000n; // adhere to provider ranges per chain
+          const concurrency = chainId === 1 ? 4 : 6;
+          const segments: Array<{ from: bigint; to: bigint }> = [];
+          for (let from = knownStart; from <= latest;) {
+            let to = from + window - 1n;
+            if (to > latest) to = latest;
+            segments.push({ from, to });
+            if (to === latest) break;
+            from = to + 1n;
           }
-          items = acc
-            .slice(-maxItems)
-            .reverse()
-            .map((e) => ({ args: e.args as any, blockNumber: e.blockNumber, transactionHash: e.transactionHash })) as GreetingLog[];
+
+          const collected: Array<GreetingLog[] | undefined> = new Array(segments.length);
+          const flattenLatestFirst = (arr: Array<GreetingLog[] | undefined>): GreetingLog[] => {
+            const ordered = arr.filter((chunk): chunk is GreetingLog[] => Array.isArray(chunk)).flat();
+            return ordered.length ? [...ordered].reverse() : [];
+          };
+
+          for (let i = 0; i < segments.length; i += concurrency) {
+            if (!mounted || activeChainRef.current !== currentChain) break;
+            const slice = segments.slice(i, i + concurrency);
+            await Promise.all(
+              slice.map(async (segment, offset) => {
+                const fetchChunk = async (attempt = 0): Promise<any[]> => {
+                  try {
+                    return (await pub.getLogs({
+                      address: addr,
+                      event: ev,
+                      fromBlock: segment.from,
+                      toBlock: segment.to,
+                    } as any)) as any[];
+                  } catch (err) {
+                    if (attempt >= 3) throw err;
+                    await sleep(300 * (attempt + 1));
+                    return fetchChunk(attempt + 1);
+                  }
+                };
+                const raw = await fetchChunk();
+                collected[i + offset] = raw.map((e) => ({
+                  args: e.args as any,
+                  blockNumber: e.blockNumber,
+                  transactionHash: e.transactionHash,
+                })) as GreetingLog[];
+              })
+            );
+
+            if (mounted && activeChainRef.current === currentChain) {
+              const partial = flattenLatestFirst(collected.slice(0, i + slice.length));
+              if (partial.length) setLogs(partial);
+            }
+          }
+
+          const finalLogs = flattenLatestFirst(collected);
+          items = finalLogs;
         } else {
-          // Other chains: single wider range for convenience
-          const from = latest > 100000n ? latest - 100000n : 0n;
-          const lgs = (await pub.getLogs({ address: addr, event: ev, fromBlock: from, toBlock: latest } as any)) as any[];
+          // Unknown chain: pull recent window as fallback
+          const fallbackFrom = latest > 100000n ? latest - 100000n : 0n;
+          const lgs = (await pub.getLogs({ address: addr, event: ev, fromBlock: fallbackFrom, toBlock: latest } as any)) as any[];
           items = lgs
-            .slice(-50)
-            .reverse()
-            .map((e) => ({ args: e.args as any, blockNumber: e.blockNumber, transactionHash: e.transactionHash })) as GreetingLog[];
+            .map((e) => ({ args: e.args as any, blockNumber: e.blockNumber, transactionHash: e.transactionHash }))
+            .reverse() as GreetingLog[];
         }
-        if (mounted) setLogs(items);
+        if (mounted && activeChainRef.current === currentChain) {
+          setLogs(items);
+          cacheRef.current[currentChain] = items;
+        }
       } catch (e: any) {
-        if (mounted) setError(String(e?.message || e));
+        if (mounted && activeChainRef.current === currentChain) setError(String(e?.message || e));
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted && activeChainRef.current === currentChain) setLoading(false);
       }
     })();
     return () => {
@@ -94,7 +156,14 @@ export default function GreetingHistory() {
     chainId,
     onLogs: (newLogs: any[]) => {
       const mapped = (newLogs || []).map((e) => ({ args: e.args, blockNumber: e.blockNumber, transactionHash: e.transactionHash })) as GreetingLog[];
-      setLogs((prev) => [...mapped.reverse(), ...prev].slice(0, 200));
+      setLogs((prev) => {
+        const additions = mapped.reverse();
+        const seen = new Set(additions.map((l) => l.transactionHash));
+        const filteredPrev = prev.filter((l) => !l.transactionHash || !seen.has(l.transactionHash));
+        const next = [...additions, ...filteredPrev].slice(0, 400);
+        cacheRef.current[chainId] = next;
+        return next;
+      });
     },
   });
 
