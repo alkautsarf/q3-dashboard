@@ -3,6 +3,8 @@
 High-performance Ethereum challenges with real contracts, real frontends, and real tests.  
 Each challenge is fully documented and production-ready.
 
+**Live App**: https://q3-dashboard-main.vercel.app/
+
 ---
 
 ## ✨ Highlights
