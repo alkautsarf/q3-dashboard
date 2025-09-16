@@ -64,7 +64,7 @@ export default function GreetingForm() {
       ),
     []
   );
-  const PERMIT_TYPEHASH_OVERRIDES = React.useMemo(
+  const PERMIT_TYPEHASH_OVERRIDES = React.useMemo<Record<number, Record<string, string>>>(
     () => ({
       1: {
         // MakerDAO DAI uses legacy permit schema (holder, spender, nonce, expiry, allowed)
