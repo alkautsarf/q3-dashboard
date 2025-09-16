@@ -64,6 +64,16 @@ export default function GreetingForm() {
       ),
     []
   );
+  const PERMIT_TYPEHASH_OVERRIDES = React.useMemo(
+    () => ({
+      1: {
+        // MakerDAO DAI uses legacy permit schema (holder, spender, nonce, expiry, allowed)
+        "0x6b175474e89094c44da98b954eedeac495271d0f":
+          "0xea2aa0a1be11a07ed86d755c93467f4f82362b452371d1ba94d1715123511acb",
+      },
+    }),
+    []
+  );
   const [eip2612Domain, setEip2612Domain] = useState<{
     name: string;
     version: string;
@@ -166,6 +176,7 @@ export default function GreetingForm() {
         setDecimals(dec);
         setSymbol(sym);
         let path: "2612" | "permit2" = "permit2";
+        const lowerAddr = tokenAddr.toLowerCase();
         try {
           const n = (await pub.readContract({
             address: tokenAddr as `0x${string}`,
@@ -183,11 +194,14 @@ export default function GreetingForm() {
               abi: erc20Abi,
               functionName: "PERMIT_TYPEHASH",
             })) as `0x${string}`;
+            const overrides = PERMIT_TYPEHASH_OVERRIDES[chainId] || {};
+            const expectedOverride = overrides[lowerAddr];
+            const normalized = onchainTypehash.toLowerCase();
             if (
-              onchainTypehash.toLowerCase() !==
-              STD_PERMIT_TYPEHASH.toLowerCase()
+              normalized !== STD_PERMIT_TYPEHASH.toLowerCase() &&
+              (!expectedOverride || normalized !== expectedOverride.toLowerCase())
             ) {
-              path = "permit2"; // nonstandard (e.g., DAI) → fallback
+              path = "permit2"; // nonstandard (e.g., DAI mainnet legacy) → fallback
             }
           } catch {
             // if not exposed, continue with further domain validation below
@@ -254,7 +268,7 @@ export default function GreetingForm() {
                     typeHash,
                     keccak256(toHex(name)),
                     keccak256(toHex(ver)),
-                    BigInt(arbitrum.id),
+                    BigInt(chainId),
                     tokenAddr as `0x${string}`,
                   ]
                 )
