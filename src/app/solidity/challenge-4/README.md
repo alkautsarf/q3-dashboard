@@ -267,6 +267,19 @@ The Foundry test suite for `Greeting.sol` is comprehensive and covers **ETH**, *
 
 ---
 
+## 🚀 Deployment Details
+- **Networks:** Ethereum Mainnet, Arbitrum  
+- **Address (deterministic via CREATE2):**
+```js
+0xF7367642f4bC701b3b44144399c0CB0D7470296F
+```
+- **Frontend configuration (.env):**
+```js
+NEXT_PUBLIC_C4_ADDRESS=0xF7367642f4bC701b3b44144399c0CB0D7470296F
+```
+
+---
+
 ## 📂 File Location
 
 ```
