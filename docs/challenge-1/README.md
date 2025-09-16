@@ -142,4 +142,4 @@ src/
 ---
 
 ## 📄 Contract Docs  
-See [BalanceReader.sol docs](../../solidity/challenge-1/README.md) for interface, deployment, and integration details.  
+See [BalanceReader.sol docs](/src/app/solidity/challenge-1/README.md) for interface, deployment, and integration details.  
