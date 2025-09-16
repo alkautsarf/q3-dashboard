@@ -74,7 +74,7 @@ forge coverage --exclude-tests --nmco script/<CONTRACT_NAME>.s.sol
     1. The frontend collects all unique token addresses.  
     2. It queries CoinGecko’s API for price data.  
     3. The UI merges price data with balances before rendering the table.  
-  - This external API call is the bottleneck — especially noticeable when fetching prices for many tokens — so table rendering can take a few seconds even though balance fetching is efficient.
+  - This external API call is the bottleneck — especially noticeable when fetching prices for many tokens — so table rendering can take a few seconds or minutes even though balance fetching is efficient.
 
 ---
 
