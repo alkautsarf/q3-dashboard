@@ -45,3 +45,5 @@ test
 # Un-ignore Foundry tests for challenge-2
 !src/app/solidity/challenge-2/test/
 !src/app/solidity/challenge-2/test/**
+!src/app/solidity/challenge-4/test/
+!src/app/solidity/challenge-4/test/**
